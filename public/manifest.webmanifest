@@ -1,0 +1,14 @@
+{
+  "name": "Ауто — комфортная звуковая среда",
+  "short_name": "Ауто",
+  "description": "Персональный инструмент звукового комфорта и саморегуляции",
+  "lang": "ru",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef1ea",
+  "theme_color": "#55766b",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
