@@ -239,13 +239,6 @@ const SOUNDS: Sound[] = [
     file: '/audio/singing-bowl.mp3',
     icon: '⌒',
   },
-  {
-    id: 'hum',
-    name: 'Мягкое гудение',
-    category: 'Спокойные',
-    file: '/audio/soft-hum.mp3',
-    icon: '◒',
-  },
 ];
 const NAV = [
   ['sounds', 'Звуки', Library],
@@ -283,12 +276,14 @@ export default function Home() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [mixName, setMixName] = useState('Мой вечер');
   const [notice, setNotice] = useState('');
+  const [mixPending, setMixPending] = useState(false);
   const [userSounds, setUserSounds] = useState<(UserSound & { url: string })[]>(
     [],
   );
   const [bpm, setBpm] = useState(60);
   const [metroOn, setMetroOn] = useState(false);
   const metroRef = useRef<number | undefined>(undefined);
+  const pendingMixRef = useRef<number | undefined>(undefined);
   const allSounds = useMemo(
     () => [
       ...SOUNDS,
@@ -347,6 +342,11 @@ export default function Home() {
         setTimeLeft((v) => {
           if (v <= 1) {
             clearInterval(tick);
+            if (pendingMixRef.current) {
+              clearTimeout(pendingMixRef.current);
+              pendingMixRef.current = undefined;
+            }
+            setMixPending(false);
             engine.current?.stopAll(fade * 60);
             setActive([]);
             setTimer(0);
@@ -363,17 +363,7 @@ export default function Home() {
       if (metroRef.current) clearInterval(metroRef.current);
       return;
     }
-    const click = () => {
-      const ctx = new AudioContext(),
-        osc = ctx.createOscillator(),
-        gain = ctx.createGain();
-      osc.frequency.value = 330;
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
-    };
+    const click = () => engine.current?.playClick();
     click();
     metroRef.current = window.setInterval(click, 60000 / bpm);
     return () => {
@@ -382,14 +372,14 @@ export default function Home() {
   }, [metroOn, bpm]);
   const start = async (sound: Sound, volume = 45) => {
     try {
-      if (sound.noise)
-        engine.current?.playNoise(sound.id, sound.noise, volume / 100);
-      else
-        await engine.current?.playFile(
-          sound.id,
-          sound.customUrl || sound.file!,
-          volume / 100,
-        );
+      const started = sound.noise
+        ? engine.current?.playNoise(sound.id, sound.noise, volume / 100)
+        : await engine.current?.playFile(
+            sound.id,
+            sound.customUrl || sound.file!,
+            volume / 100,
+          );
+      if (!started) return;
       setActive((v) => [
         ...v.filter((a) => a.id !== sound.id),
         { id: sound.id, volume },
@@ -406,6 +396,15 @@ export default function Home() {
     engine.current?.stop(id);
     setActive((v) => v.filter((a) => a.id !== id));
   };
+  const stopAll = (fadeSeconds = 0) => {
+    if (pendingMixRef.current) {
+      clearTimeout(pendingMixRef.current);
+      pendingMixRef.current = undefined;
+    }
+    setMixPending(false);
+    engine.current?.stopAll(fadeSeconds);
+    setActive([]);
+  };
   const toggle = (s: Sound) =>
     active.some((a) => a.id === s.id) ? stop(s.id) : void start(s);
   const volume = (id: string, value: number) => {
@@ -413,16 +412,18 @@ export default function Home() {
     setActive((v) => v.map((a) => (a.id === id ? { ...a, volume: value } : a)));
   };
   const runMix = (mix: Mix) => {
-    engine.current?.stopAll(0.3);
-    setActive([]);
-    setTimeout(
-      () =>
-        mix.tracks.forEach((t) => {
+    stopAll(0.18);
+    setMixPending(true);
+    pendingMixRef.current = window.setTimeout(() => {
+      pendingMixRef.current = undefined;
+      setMixPending(false);
+      void Promise.all(
+        mix.tracks.map((t) => {
           const s = allSounds.find((x) => x.id === t.id);
-          if (s) void start(s, t.volume);
+          return s ? start(s, t.volume) : Promise.resolve();
         }),
-      400,
-    );
+      );
+    }, 220);
   };
   const saveMix = () => {
     if (!mixName.trim() || !active.length) return;
@@ -521,7 +522,7 @@ export default function Home() {
           <img
             src="/assets/logo.png"
             alt="Ауто"
-            className="h-12 w-auto object-contain md:h-14"
+            className="brand-logo h-12 w-auto object-contain md:h-14"
           />
         </button>
         <button
@@ -596,10 +597,7 @@ export default function Home() {
               sounds={allSounds}
               mixes={mixes}
               start={start}
-              stopAll={() => {
-                engine.current?.stopAll();
-                setActive([]);
-              }}
+              stopAll={stopAll}
               runMix={runMix}
             />
           )}
@@ -633,6 +631,7 @@ export default function Home() {
                     <div className="mt-2 flex items-center gap-3">
                       <Volume2 size={16} />
                       <Slider
+                        className="mix-slider"
                         aria-label={`Громкость ${s?.name}`}
                         value={[a.volume]}
                         onValueChange={(v) =>
@@ -659,7 +658,7 @@ export default function Home() {
               <span>{master}%</span>
             </div>
             <Slider
-              className="mt-3"
+              className="mix-slider mt-3"
               aria-label="Общая громкость"
               value={[master]}
               onValueChange={(v) =>
@@ -669,7 +668,7 @@ export default function Home() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <button
-              disabled={!active.length}
+              disabled={!active.length && !mixPending}
               onClick={() => setSaveOpen(true)}
               className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
             >
@@ -678,10 +677,7 @@ export default function Home() {
             </button>
             <button
               disabled={!active.length}
-              onClick={() => {
-                engine.current?.stopAll();
-                setActive([]);
-              }}
+              onClick={() => stopAll()}
               className="min-h-11 rounded-xl border px-3 text-sm font-medium disabled:opacity-40"
             >
               Тишина
@@ -833,7 +829,7 @@ function SoundLibrary({
           return (
             <article
               key={s.id}
-              className={`glass group min-h-44 rounded-[24px] p-4 transition ${on ? 'ring-2 ring-primary' : ''}`}
+              className={`glass sound-card group min-h-44 rounded-[24px] p-4 transition ${on ? 'ring-2 ring-primary' : ''}`}
             >
               <div className="flex justify-between">
                 <button
@@ -1006,6 +1002,7 @@ function Metronome({
             −
           </button>
           <Slider
+            className="mix-slider"
             min={20}
             max={240}
             value={[bpm]}
@@ -1025,7 +1022,8 @@ function Metronome({
             <button
               key={n}
               onClick={() => setBpm(n)}
-              className="min-h-10 rounded-full bg-secondary px-4"
+              aria-pressed={bpm === n}
+              className={`min-h-10 rounded-full px-4 font-medium transition ${bpm === n ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/25' : 'bg-secondary hover:bg-accent'}`}
             >
               {n}
             </button>
@@ -1033,7 +1031,8 @@ function Metronome({
         </div>
         <button
           onClick={() => setOn(!on)}
-          className="mt-8 inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl bg-primary px-7 font-semibold text-primary-foreground"
+          aria-pressed={on}
+          className={`mt-8 inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl px-7 font-semibold transition ${on ? 'bg-[#b7d9ce] text-[#17352c] shadow-lg ring-4 ring-[#b7d9ce]/30' : 'bg-primary text-primary-foreground hover:brightness-95'}`}
         >
           {on ? <Pause /> : <Play />}
           {on ? 'Остановить' : 'Начать'}
@@ -1273,7 +1272,7 @@ function Calm({
           </button>
         )}
         <button
-          onClick={stopAll}
+          onClick={() => stopAll()}
           className="flex min-h-24 items-center justify-between rounded-[22px] border p-5 text-left text-lg font-semibold"
         >
           <span>Тишина</span>

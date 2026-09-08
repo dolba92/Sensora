@@ -1,10 +1,10 @@
-const CACHE = 'auto-v2';
+const CACHE = 'auto-v6';
 const AUDIO = [
   'rain.mp3', 'heavy-rain.mp3', 'thunder.mp3', 'ocean.mp3', 'waves.mp3',
   'river.mp3', 'waterfall.mp3', 'forest.mp3', 'wind.mp3', 'birds.mp3',
   'fan.mp3', 'air-conditioner.mp3', 'vacuum.mp3', 'train.mp3', 'airplane.mp3',
   'cafe.mp3', 'library.mp3', 'room.mp3', 'fireplace.mp3', 'chimes.mp3',
-  'singing-bowl.mp3', 'soft-hum.mp3'
+  'singing-bowl.mp3'
 ].map(name => `/audio/${name}`);
 const CORE = ['/manifest.webmanifest', '/assets/logo.png', '/assets/background.png', '/assets/icon-192.png', '/assets/icon-512.png', ...AUDIO];
 

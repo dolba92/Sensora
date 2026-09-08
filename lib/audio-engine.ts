@@ -25,7 +25,7 @@ export class AudioEngine {
       this.master?.gain.setTargetAtTime(value, this.context.currentTime, 0.08);
   }
   async playFile(id: string, url: string, volume: number) {
-    if (this.tracks.has(id)) return;
+    if (this.tracks.has(id)) return true;
     const ctx = this.ensure();
     const element = new Audio(url);
     element.loop = true;
@@ -38,13 +38,19 @@ export class AudioEngine {
     this.tracks.set(id, { gain, source, element });
     try {
       await element.play();
+      if (this.tracks.get(id)?.source !== source) {
+        this.disposeTrack({ gain, source, element });
+        return false;
+      }
+      return true;
     } catch (error) {
-      this.tracks.delete(id);
+      if (this.tracks.get(id)?.source === source) this.tracks.delete(id);
+      this.disposeTrack({ gain, source, element });
       throw error;
     }
   }
   playNoise(id: string, kind: NoiseKind, volume: number) {
-    if (this.tracks.has(id)) return;
+    if (this.tracks.has(id)) return true;
     const ctx = this.ensure(),
       length = ctx.sampleRate * 8,
       buffer = ctx.createBuffer(1, length, ctx.sampleRate),
@@ -83,30 +89,64 @@ export class AudioEngine {
     source.connect(gain).connect(this.master!);
     source.start();
     this.tracks.set(id, { gain, source });
+    return true;
   }
   setVolume(id: string, volume: number) {
     const track = this.tracks.get(id);
     if (track && this.context)
       track.gain.gain.setTargetAtTime(volume, this.context.currentTime, 0.06);
   }
-  stop(id: string, fade = 0.7) {
-    const track = this.tracks.get(id);
-    if (!track || !this.context) return;
-    const end = this.context.currentTime + fade;
-    track.gain.gain.cancelScheduledValues(this.context.currentTime);
-    track.gain.gain.linearRampToValueAtTime(0, end);
-    window.setTimeout(
+  playClick() {
+    const ctx = this.ensure(),
+      oscillator = ctx.createOscillator(),
+      gain = ctx.createGain();
+    oscillator.frequency.value = 330;
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+    oscillator.connect(gain).connect(this.master!);
+    oscillator.addEventListener(
+      'ended',
       () => {
-        track.element?.pause();
-        if (!track.element) (track.source as AudioBufferSourceNode).stop();
-        track.source.disconnect();
-        track.gain.disconnect();
+        oscillator.disconnect();
+        gain.disconnect();
       },
-      fade * 1000 + 80,
+      { once: true },
     );
-    this.tracks.delete(id);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.1);
   }
-  stopAll(fade = 1.2) {
+  private disposeTrack(track: Track) {
+    try {
+      if (track.element) {
+        track.element.pause();
+        track.element.removeAttribute('src');
+        track.element.load();
+      } else {
+        (track.source as AudioBufferSourceNode).stop();
+      }
+    } catch {}
+    try {
+      track.source.disconnect();
+    } catch {}
+    try {
+      track.gain.disconnect();
+    } catch {}
+  }
+  stop(id: string, fade = 0.12) {
+    const track = this.tracks.get(id);
+    if (!track) return;
+    this.tracks.delete(id);
+    if (!this.context || fade <= 0) {
+      this.disposeTrack(track);
+      return;
+    }
+    const now = this.context.currentTime;
+    track.gain.gain.cancelScheduledValues(now);
+    track.gain.gain.setValueAtTime(track.gain.gain.value, now);
+    track.gain.gain.linearRampToValueAtTime(0, now + fade);
+    window.setTimeout(() => this.disposeTrack(track), fade * 1000 + 30);
+  }
+  stopAll(fade = 0) {
     [...this.tracks.keys()].forEach((id) => this.stop(id, fade));
   }
 }
