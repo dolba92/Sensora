@@ -8,11 +8,13 @@ export class AudioEngine {
   private context?: AudioContext;
   private master?: GainNode;
   private tracks = new Map<string, Track>();
+  private noiseBuffers = new Map<NoiseKind, AudioBuffer>();
   private masterValue = 0.7;
   private getOrCreateAudioContext() {
     if (this.context?.state === 'closed') {
       this.context = undefined;
       this.master = undefined;
+      this.noiseBuffers.clear();
     }
     if (!this.context) {
       const AudioContextClass =
@@ -66,14 +68,42 @@ export class AudioEngine {
   }
   async playNoise(id: string, kind: NoiseKind, volume: number) {
     if (this.tracks.has(id)) return true;
-    // iOS/WebKit may drop the user activation after awaiting resume(). Create,
-    // connect and start the buffer source synchronously in the original tap.
     const ctx = this.getOrCreateAudioContext();
     const resumePromise =
       ctx.state === 'running' ? Promise.resolve() : ctx.resume();
-    const length = ctx.sampleRate * 8,
-      buffer = ctx.createBuffer(1, length, ctx.sampleRate),
-      data = buffer.getChannelData(0);
+    const source = ctx.createBufferSource();
+    source.buffer = this.getNoiseBuffer(ctx, kind);
+    source.loop = true;
+    const gain = ctx.createGain();
+    const safeVolume = Number.isFinite(volume)
+      ? Math.min(1, Math.max(0, volume))
+      : 0.45;
+    gain.gain.setValueAtTime(safeVolume, ctx.currentTime);
+    source.connect(gain).connect(this.master!);
+    const track = { gain, source };
+    this.tracks.set(id, track);
+    this.logNoise('before resume', ctx, gain);
+    try {
+      await resumePromise;
+      if (ctx.state !== 'running')
+        throw new Error('Не удалось запустить AudioContext.');
+      if (this.tracks.get(id)?.source !== source) return false;
+      this.logNoise('after resume', ctx, gain);
+      source.start();
+      this.logNoise('source started', ctx, gain);
+      return true;
+    } catch (error) {
+      if (this.tracks.get(id)?.source === source) this.tracks.delete(id);
+      this.disposeTrack(track);
+      throw error;
+    }
+  }
+  private getNoiseBuffer(ctx: AudioContext, kind: NoiseKind) {
+    const cached = this.noiseBuffers.get(kind);
+    if (cached) return cached;
+    const length = Math.max(1, Math.floor(ctx.sampleRate * 2));
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
     let brown = 0,
       b0 = 0,
       b1 = 0,
@@ -95,31 +125,22 @@ export class AudioEngine {
         b3 = 0.8665 * b3 + white * 0.3104856;
         b4 = 0.55 * b4 + white * 0.5329522;
         b5 = -0.7616 * b5 - white * 0.016898;
-        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        data[i] =
+          (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
         b6 = white * 0.115926;
       }
     }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 1.2);
-    source.connect(gain).connect(this.master!);
-    const track = { gain, source };
-    this.tracks.set(id, track);
-    try {
-      source.start(0);
-      await resumePromise;
-      if (ctx.state !== 'running')
-        throw new Error('Не удалось запустить AudioContext.');
-      if (this.tracks.get(id)?.source !== source) return false;
-      return true;
-    } catch (error) {
-      if (this.tracks.get(id)?.source === source) this.tracks.delete(id);
-      this.disposeTrack(track);
-      throw error;
-    }
+    this.noiseBuffers.set(kind, buffer);
+    return buffer;
+  }
+  private logNoise(label: string, ctx: AudioContext, gain: GainNode) {
+    if (!import.meta.env.DEV) return;
+    console.debug(`[Sensora noise] ${label}`, {
+      contextState: ctx.state,
+      sampleRate: ctx.sampleRate,
+      masterGain: this.master?.gain.value,
+      individualGain: gain.gain.value,
+    });
   }
   setVolume(id: string, volume: number) {
     const track = this.tracks.get(id);
