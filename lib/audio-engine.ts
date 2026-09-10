@@ -232,7 +232,7 @@ export class AudioEngine {
     }
 
     const sampleRate = 44100;
-    const durationSeconds = 4;
+    const durationSeconds = 120;
     const length = sampleRate * durationSeconds;
 
     const samples = new Float32Array(length);
