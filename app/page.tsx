@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AudioEngine, type NoiseKind } from '@/lib/audio-engine';
 import {
   deleteUserSound,
@@ -35,7 +35,6 @@ import {
   Sun,
   Monitor,
   Volume2,
-  X,
 } from 'lucide-react';
 
 type Section =
@@ -276,7 +275,8 @@ export default function Home() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [mixName, setMixName] = useState('Мой вечер');
   const [notice, setNotice] = useState('');
-  const [mixPending, setMixPending] = useState(false);
+  const [soundVolumes, setSoundVolumes] = useState<Record<string, number>>({});
+  const [pendingMixId, setPendingMixId] = useState<string | null>(null);
   const [userSounds, setUserSounds] = useState<(UserSound & { url: string })[]>(
     [],
   );
@@ -308,6 +308,7 @@ export default function Home() {
         setTheme(s.theme || 'light');
         setReduceMotion(!!s.reduceMotion);
         setMaster(s.master ?? 70);
+        setSoundVolumes(s.soundVolumes || {});
       }
     } catch {}
     void getUserSounds()
@@ -323,7 +324,15 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem(
       'auto-state',
-      JSON.stringify({ favorites, recent, mixes, theme, reduceMotion, master }),
+      JSON.stringify({
+        favorites,
+        recent,
+        mixes,
+        theme,
+        reduceMotion,
+        master,
+        soundVolumes,
+      }),
     );
     const root = document.documentElement,
       dark =
@@ -333,7 +342,7 @@ export default function Home() {
     root.classList.toggle('dark', dark);
     root.classList.toggle('reduce-motion', reduceMotion);
     engine.current?.setMaster(master / 100);
-  }, [favorites, recent, mixes, theme, reduceMotion, master]);
+  }, [favorites, recent, mixes, theme, reduceMotion, master, soundVolumes]);
   useEffect(() => {
     if (!timer) return;
     setTimeLeft(timer * 60);
@@ -346,7 +355,7 @@ export default function Home() {
               clearTimeout(pendingMixRef.current);
               pendingMixRef.current = undefined;
             }
-            setMixPending(false);
+            setPendingMixId(null);
             engine.current?.stopAll(fade * 60);
             setActive([]);
             setTimer(0);
@@ -363,35 +372,43 @@ export default function Home() {
       if (metroRef.current) clearInterval(metroRef.current);
       return;
     }
-    const click = () => engine.current?.playClick();
+    const click = () => {
+      const current = engine.current;
+      if (current) void current.playClick().catch(() => setMetroOn(false));
+    };
     click();
     metroRef.current = window.setInterval(click, 60000 / bpm);
     return () => {
       if (metroRef.current) clearInterval(metroRef.current);
     };
   }, [metroOn, bpm]);
-  const start = async (sound: Sound, volume = 45) => {
-    try {
-      const started = sound.noise
-        ? engine.current?.playNoise(sound.id, sound.noise, volume / 100)
-        : await engine.current?.playFile(
-            sound.id,
-            sound.customUrl || sound.file!,
-            volume / 100,
-          );
-      if (!started) return;
-      setActive((v) => [
-        ...v.filter((a) => a.id !== sound.id),
-        { id: sound.id, volume },
-      ]);
-      setRecent((v) =>
-        [sound.id, ...v.filter((id) => id !== sound.id)].slice(0, 8),
-      );
-      setNotice(`${sound.name} добавлен в микс`);
-    } catch {
-      setNotice(`Не удалось открыть «${sound.name}». Проверьте аудиофайл.`);
-    }
-  };
+  const start = useCallback(
+    async (sound: Sound, requestedVolume?: number) => {
+      const soundVolume = requestedVolume ?? soundVolumes[sound.id] ?? 45;
+      try {
+        const started = await (sound.noise
+          ? engine.current?.playNoise(sound.id, sound.noise, soundVolume / 100)
+          : engine.current?.playFile(
+              sound.id,
+              sound.customUrl || sound.file!,
+              soundVolume / 100,
+            ));
+        if (!started) return;
+        setSoundVolumes((values) => ({ ...values, [sound.id]: soundVolume }));
+        setActive((v) => [
+          ...v.filter((a) => a.id !== sound.id),
+          { id: sound.id, volume: soundVolume },
+        ]);
+        setRecent((v) =>
+          [sound.id, ...v.filter((id) => id !== sound.id)].slice(0, 8),
+        );
+        setNotice(`${sound.name} добавлен в микс`);
+      } catch {
+        setNotice(`Не удалось открыть «${sound.name}». Проверьте аудиофайл.`);
+      }
+    },
+    [soundVolumes],
+  );
   const stop = (id: string) => {
     engine.current?.stop(id);
     setActive((v) => v.filter((a) => a.id !== id));
@@ -401,22 +418,23 @@ export default function Home() {
       clearTimeout(pendingMixRef.current);
       pendingMixRef.current = undefined;
     }
-    setMixPending(false);
+    setPendingMixId(null);
     engine.current?.stopAll(fadeSeconds);
     setActive([]);
   };
   const toggle = (s: Sound) =>
     active.some((a) => a.id === s.id) ? stop(s.id) : void start(s);
-  const volume = (id: string, value: number) => {
+  const setSoundVolume = (id: string, value: number) => {
+    setSoundVolumes((values) => ({ ...values, [id]: value }));
     engine.current?.setVolume(id, value / 100);
     setActive((v) => v.map((a) => (a.id === id ? { ...a, volume: value } : a)));
   };
   const runMix = (mix: Mix) => {
     stopAll(0.18);
-    setMixPending(true);
+    setPendingMixId(mix.id);
     pendingMixRef.current = window.setTimeout(() => {
       pendingMixRef.current = undefined;
-      setMixPending(false);
+      setPendingMixId(null);
       void Promise.all(
         mix.tracks.map((t) => {
           const s = allSounds.find((x) => x.id === t.id);
@@ -424,6 +442,25 @@ export default function Home() {
         }),
       );
     }, 220);
+  };
+  const stopMix = (mix: Mix) => {
+    if (pendingMixId === mix.id) {
+      stopAll();
+      return;
+    }
+    mix.tracks.forEach((track) => stop(track.id));
+  };
+  const changeMetronome = async (next: boolean) => {
+    if (!next) {
+      setMetroOn(false);
+      return;
+    }
+    try {
+      await engine.current?.ensureAudioContextRunning();
+      setMetroOn(true);
+    } catch {
+      setNotice('Не удалось запустить звук метронома');
+    }
   };
   const saveMix = () => {
     if (!mixName.trim() || !active.length) return;
@@ -510,7 +547,7 @@ export default function Home() {
       ),
     ).catch(() => undefined);
     return () => lifecycle.abort();
-  }, [allSounds]);
+  }, [allSounds, start]);
   return (
     <div className="min-h-screen p-3 pb-28 md:p-6 md:pb-8">
       <header className="glass mx-auto flex max-w-[1440px] items-center justify-between rounded-[28px] px-4 py-3 md:px-7">
@@ -521,19 +558,19 @@ export default function Home() {
         >
           <img
             src="/assets/logo.png"
-            alt="Ауто"
+            alt="Sensora"
             className="brand-logo h-12 w-auto object-contain md:h-14"
           />
         </button>
         <button
           onClick={() => setSection('calm')}
-          className="flex min-h-12 items-center gap-2 rounded-2xl bg-[#6d887f] px-4 font-semibold text-white shadow-sm transition hover:bg-[#58766c] md:px-6"
+          className="flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-sm transition hover:bg-[#68577f] md:px-6"
         >
           <Headphones size={20} />
           <span>Мне нужно успокоиться</span>
         </button>
       </header>
-      <div className="mx-auto mt-5 grid max-w-[1440px] gap-5 md:grid-cols-[230px_minmax(0,1fr)_300px]">
+      <div className="mx-auto mt-5 grid max-w-[1440px] gap-5 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)]">
         <aside className="glass hidden h-fit rounded-[28px] p-3 md:block">
           <nav aria-label="Основные разделы" className="space-y-1">
             {NAV.map(([id, label, Icon]) => (
@@ -565,15 +602,21 @@ export default function Home() {
               active={active}
               favorites={favorites}
               toggle={toggle}
+              volumes={soundVolumes}
+              setVolume={setSoundVolume}
               setFavorites={setFavorites}
               addFile={addFile}
               removeCustom={removeCustom}
+              onSave={() => setSaveOpen(true)}
             />
           ) : section === 'mixes' ? (
             <Mixes
               mixes={mixes}
               allSounds={allSounds}
+              active={active}
+              pendingMixId={pendingMixId}
               runMix={runMix}
+              stopMix={stopMix}
               setMixes={setMixes}
             />
           ) : section === 'metronome' ? (
@@ -581,7 +624,7 @@ export default function Home() {
               bpm={bpm}
               setBpm={setBpm}
               on={metroOn}
-              setOn={setMetroOn}
+              setOn={(next) => void changeMetronome(next)}
             />
           ) : section === 'regulation' ? (
             <Regulation />
@@ -591,143 +634,42 @@ export default function Home() {
               setTheme={setTheme}
               reduce={reduceMotion}
               setReduce={setReduceMotion}
+              master={master}
+              setMaster={setMaster}
+              timer={timer}
+              setTimer={setTimer}
+              fade={fade}
+              setFade={setFade}
+              timeLeft={timeLeft}
             />
           ) : (
             <Calm
               sounds={allSounds}
               mixes={mixes}
-              start={start}
-              stopAll={stopAll}
+              active={active}
+              pendingMixId={pendingMixId}
+              toggle={toggle}
               runMix={runMix}
+              stopMix={stopMix}
             />
           )}
         </main>
-        <aside className="glass h-fit rounded-[28px] p-5 md:sticky md:top-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Сейчас играет</h2>
-            <span className="rounded-full bg-secondary px-3 py-1 text-sm">
-              {active.length}
-            </span>
-          </div>
-          {active.length ? (
-            <div className="mt-4 space-y-4">
-              {active.map((a) => {
-                const s = allSounds.find((x) => x.id === a.id)!;
-                return (
-                  <div
-                    key={a.id}
-                    className="rounded-2xl border bg-background/40 p-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{s?.name}</span>
-                      <button
-                        onClick={() => stop(a.id)}
-                        className="rounded-lg p-2 hover:bg-secondary"
-                        aria-label={`Убрать ${s?.name}`}
-                      >
-                        <X size={17} />
-                      </button>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3">
-                      <Volume2 size={16} />
-                      <Slider
-                        className="mix-slider"
-                        aria-label={`Громкость ${s?.name}`}
-                        value={[a.volume]}
-                        onValueChange={(v) =>
-                          volume(a.id, Array.isArray(v) ? v[0] : v)
-                        }
-                      />
-                      <span className="w-9 text-right text-sm">
-                        {a.volume}%
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-2xl border border-dashed p-5 text-center text-muted-foreground">
-              <Headphones className="mx-auto mb-2" />
-              Звуки не включены
-            </div>
-          )}
-          <div className="mt-5">
-            <div className="flex justify-between text-sm">
-              <span>Общая громкость</span>
-              <span>{master}%</span>
-            </div>
-            <Slider
-              className="mix-slider mt-3"
-              aria-label="Общая громкость"
-              value={[master]}
-              onValueChange={(v) =>
-                setMaster(Array.isArray(v) ? v[0] : v)
-              }
-            />
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <button
-              disabled={!active.length && !mixPending}
-              onClick={() => setSaveOpen(true)}
-              className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
-            >
-              <Save size={16} />
-              Сохранить
-            </button>
-            <button
-              disabled={!active.length}
-              onClick={() => stopAll()}
-              className="min-h-11 rounded-xl border px-3 text-sm font-medium disabled:opacity-40"
-            >
-              Тишина
-            </button>
-          </div>
-          <div className="mt-5 border-t pt-4">
-            <span className="text-sm font-medium">Таймер</span>
-            <div className="mt-2 grid grid-cols-4 gap-1">
-              {[5, 10, 15, 20, 30, 60, 0].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setTimer(n)}
-                  className={`min-h-9 rounded-lg text-sm ${timer === n ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                >
-                  {n || '∞'}
-                </button>
-              ))}
-            </div>
-            {timeLeft > 0 && (
-              <p className="mt-2 text-sm">
-                Осталось {Math.ceil(timeLeft / 60)} мин.
-              </p>
-            )}
-            <label className="mt-3 block text-sm">
-              Затухание{' '}
-              <select
-                value={fade}
-                onChange={(e) => setFade(Number(e.target.value))}
-                className="ml-1 rounded-lg border bg-background px-2 py-1"
-              >
-                <option value={0.5}>30 сек.</option>
-                <option value={1}>1 мин.</option>
-                <option value={5}>5 мин.</option>
-              </select>
-            </label>
-          </div>
-        </aside>
       </div>
       <nav
-        className="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 rounded-[22px] p-1 md:hidden"
+        className="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 gap-1 rounded-[22px] p-1.5 md:hidden"
         aria-label="Мобильная навигация"
       >
         {NAV.map(([id, label, Icon]) => (
           <button
             key={id}
             onClick={() => setSection(id)}
-            className={`flex min-h-14 flex-col items-center justify-center rounded-xl text-[11px] ${section === id ? 'bg-primary text-primary-foreground' : ''}`}
+            aria-label={label}
+            title={label}
+            aria-current={section === id ? 'page' : undefined}
+            className={`grid min-h-12 place-items-center rounded-xl transition ${section === id ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-secondary'}`}
           >
-            <Icon size={19} />
-            <span className="mt-1 max-w-full truncate">{label}</span>
+            <Icon size={21} />
+            <span className="sr-only">{label}</span>
           </button>
         ))}
       </nav>
@@ -774,9 +716,12 @@ function SoundLibrary({
   active,
   favorites,
   toggle,
+  volumes,
+  setVolume,
   setFavorites,
   addFile,
   removeCustom,
+  onSave,
 }: {
   title: string;
   filtered: Sound[];
@@ -785,13 +730,16 @@ function SoundLibrary({
   active: Active[];
   favorites: string[];
   toggle: (s: Sound) => void;
+  volumes: Record<string, number>;
+  setVolume: (id: string, value: number) => void;
   setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
   addFile: (f: File | null) => void;
   removeCustom: (id: string) => void;
+  onSave: () => void;
 }) {
   return (
     <section>
-      <div className="glass rounded-[28px] p-5 md:p-7">
+      <div className="glass sound-library-panel rounded-[28px] p-5 md:p-7">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-sm text-muted-foreground">
@@ -799,16 +747,26 @@ function SoundLibrary({
             </p>
             <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
           </div>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border bg-background/50 px-4 font-medium">
-            <Plus size={18} />
-            Добавить свой звук
-            <input
-              type="file"
-              accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.m4a"
-              className="sr-only"
-              onChange={(e) => addFile(e.target.files?.[0] || null)}
-            />
-          </label>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border bg-background/50 px-4 font-medium">
+              <Plus size={18} />
+              Добавить свой звук
+              <input
+                type="file"
+                accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,.m4a"
+                className="sr-only"
+                onChange={(e) => addFile(e.target.files?.[0] || null)}
+              />
+            </label>
+            <button
+              disabled={!active.length}
+              onClick={onSave}
+              className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 font-medium text-primary-foreground transition hover:bg-[#68577f] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Save size={18} />
+              Сохранить микс
+            </button>
+          </div>
         </div>
         <div className="quiet-scroll mt-6 flex gap-2 overflow-x-auto pb-2">
           {CATEGORIES.map((c) => (
@@ -825,22 +783,20 @@ function SoundLibrary({
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((s) => {
           const on = active.some((a) => a.id === s.id),
-            fav = favorites.includes(s.id);
+            fav = favorites.includes(s.id),
+            soundVolume = volumes[s.id] ?? 45;
           return (
             <article
               key={s.id}
-              className={`glass sound-card group min-h-44 rounded-[24px] p-4 transition ${on ? 'ring-2 ring-primary' : ''}`}
+              className={`sound-card group flex min-h-[248px] flex-col rounded-[24px] border p-4 transition ${on ? 'sound-card--playing' : ''}`}
             >
               <div className="flex justify-between">
-                <button
-                  onClick={() => toggle(s)}
-                  className={`grid size-12 place-items-center rounded-2xl text-2xl ${on ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                  aria-label={
-                    on ? `Остановить ${s.name}` : `Включить ${s.name}`
-                  }
+                <span
+                  className={`grid size-12 place-items-center rounded-2xl text-2xl ${on ? 'bg-primary text-primary-foreground' : 'bg-[#eeeaf7] dark:bg-secondary'}`}
+                  aria-hidden="true"
                 >
-                  {on ? <Pause size={21} /> : s.icon}
-                </button>
+                  {s.icon}
+                </span>
                 <div className="flex">
                   <button
                     onClick={() =>
@@ -872,8 +828,46 @@ function SoundLibrary({
                   )}
                 </div>
               </div>
-              <h2 className="mt-5 font-semibold">{s.name}</h2>
+              <h2 className="mt-4 flex items-center gap-2 font-semibold">
+                {s.name}
+                {on && (
+                  <span
+                    className="size-2.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_3px_rgba(117,101,143,.14)]"
+                    aria-label="Сейчас играет"
+                  />
+                )}
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">{s.category}</p>
+              <div className="mt-auto pt-4">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Volume2 className="shrink-0 text-muted-foreground" size={16} />
+                  <Slider
+                    className="mix-slider min-w-0"
+                    aria-label={`Громкость ${s.name}`}
+                    value={[soundVolume]}
+                    onValueChange={(value) =>
+                      setVolume(
+                        s.id,
+                        Array.isArray(value) ? value[0] : value,
+                      )
+                    }
+                  />
+                  <span className="w-9 shrink-0 text-right text-xs text-muted-foreground">
+                    {soundVolume}%
+                  </span>
+                </div>
+                <button
+                  onClick={() => toggle(s)}
+                  aria-pressed={on}
+                  className={`mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-1 text-xs font-semibold transition md:gap-2 md:px-2 md:text-sm ${on ? 'bg-[#68577f] text-white hover:bg-[#5e4e75]' : 'bg-primary text-primary-foreground hover:bg-[#68577f]'}`}
+                  aria-label={
+                    on ? `Выключить ${s.name}` : `Включить ${s.name}`
+                  }
+                >
+                  {on ? <Pause size={17} /> : <Play size={17} />}
+                  {on ? 'Выключить звук' : 'Включить звук'}
+                </button>
+              </div>
             </article>
           );
         })}
@@ -889,12 +883,18 @@ function SoundLibrary({
 function Mixes({
   mixes,
   allSounds,
+  active,
+  pendingMixId,
   runMix,
+  stopMix,
   setMixes,
 }: {
   mixes: Mix[];
   allSounds: Sound[];
+  active: Active[];
+  pendingMixId: string | null;
   runMix: (m: Mix) => void;
+  stopMix: (m: Mix) => void;
   setMixes: React.Dispatch<React.SetStateAction<Mix[]>>;
 }) {
   return (
@@ -903,11 +903,18 @@ function Mixes({
       <h1 className="text-3xl font-semibold">Мои миксы</h1>
       {mixes.length ? (
         <div className="mt-6 grid gap-3">
-          {mixes.map((m) => (
-            <div
-              key={m.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-background/35 p-4"
-            >
+          {mixes.map((m) => {
+            const on =
+              pendingMixId === m.id ||
+              m.tracks.length > 0 &&
+              m.tracks.every((track) =>
+                active.some((item) => item.id === track.id),
+              );
+            return (
+              <div
+                key={m.id}
+                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 ${on ? 'bg-accent' : 'bg-background/35'}`}
+              >
               <div>
                 <h2 className="font-semibold">{m.name}</h2>
                 <p className="text-sm text-muted-foreground">
@@ -919,11 +926,12 @@ function Mixes({
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => runMix(m)}
+                  onClick={() => (on ? stopMix(m) : runMix(m))}
+                  aria-pressed={on}
                   className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 font-medium text-primary-foreground"
                 >
-                  <Play size={17} />
-                  Запустить
+                  {on ? <Pause size={17} /> : <Play size={17} />}
+                  {on ? 'Выключить' : 'Запустить'}
                 </button>
                 <button
                   onClick={() => {
@@ -947,8 +955,9 @@ function Mixes({
                   <Trash2 className="mx-auto" size={18} />
                 </button>
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="mt-6 rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
@@ -1032,7 +1041,7 @@ function Metronome({
         <button
           onClick={() => setOn(!on)}
           aria-pressed={on}
-          className={`mt-8 inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl px-7 font-semibold transition ${on ? 'bg-[#b7d9ce] text-[#17352c] shadow-lg ring-4 ring-[#b7d9ce]/30' : 'bg-primary text-primary-foreground hover:brightness-95'}`}
+          className={`mt-8 inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl px-7 font-semibold transition ${on ? 'bg-[#68577f] text-white shadow-md ring-4 ring-[#d5cbea]/50' : 'bg-primary text-primary-foreground hover:bg-[#68577f]'}`}
         >
           {on ? <Pause /> : <Play />}
           {on ? 'Остановить' : 'Начать'}
@@ -1165,16 +1174,87 @@ function SettingsView({
   setTheme,
   reduce,
   setReduce,
+  master,
+  setMaster,
+  timer,
+  setTimer,
+  fade,
+  setFade,
+  timeLeft,
 }: {
   theme: string;
   setTheme: (v: 'light' | 'dark' | 'system') => void;
   reduce: boolean;
   setReduce: (v: boolean) => void;
+  master: number;
+  setMaster: (v: number) => void;
+  timer: number;
+  setTimer: (v: number) => void;
+  fade: number;
+  setFade: (v: number) => void;
+  timeLeft: number;
 }) {
   return (
     <section className="glass rounded-[28px] p-6 md:p-8">
       <h1 className="text-3xl font-semibold">Настройки</h1>
       <div className="mt-7 max-w-2xl space-y-4">
+        <div className="rounded-2xl border bg-background/35 p-5">
+          <h2 className="text-lg font-semibold">Звук</h2>
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-3">
+              <label className="font-medium" htmlFor="master-volume">
+                Общая громкость
+              </label>
+              <span className="text-sm text-muted-foreground">{master}%</span>
+            </div>
+            <div className="mt-2 flex min-w-0 items-center gap-3">
+              <Volume2 className="shrink-0 text-muted-foreground" size={18} />
+              <Slider
+                id="master-volume"
+                className="mix-slider min-w-0"
+                aria-label="Общая громкость"
+                value={[master]}
+                onValueChange={(value) =>
+                  setMaster(Array.isArray(value) ? value[0] : value)
+                }
+              />
+            </div>
+          </div>
+          <div className="mt-5 border-t pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-medium">Таймер</h3>
+              {timeLeft > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  Осталось {Math.ceil(timeLeft / 60)} мин.
+                </span>
+              )}
+            </div>
+            <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+              {[5, 10, 15, 20, 30, 60, 0].map((minutes) => (
+                <button
+                  key={minutes}
+                  onClick={() => setTimer(minutes)}
+                  aria-pressed={timer === minutes}
+                  className={`min-h-10 rounded-xl text-sm font-medium transition ${timer === minutes ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-accent'}`}
+                >
+                  {minutes || '∞'}
+                </button>
+              ))}
+            </div>
+            <label className="mt-4 flex flex-wrap items-center gap-2 text-sm font-medium">
+              Затухание
+              <select
+                value={fade}
+                onChange={(event) => setFade(Number(event.target.value))}
+                className="min-h-10 rounded-xl border bg-secondary px-3"
+              >
+                <option value={0.5}>30 сек.</option>
+                <option value={1}>1 мин.</option>
+                <option value={5}>5 мин.</option>
+              </select>
+            </label>
+          </div>
+        </div>
         <div className="rounded-2xl border bg-background/35 p-5">
           <h2 className="font-semibold">Тема</h2>
           <div className="mt-3 grid grid-cols-3 gap-2">
@@ -1223,15 +1303,19 @@ function SettingsView({
 function Calm({
   sounds,
   mixes,
-  start,
-  stopAll,
+  active,
+  pendingMixId,
+  toggle,
   runMix,
+  stopMix,
 }: {
   sounds: Sound[];
   mixes: Mix[];
-  start: (s: Sound, v?: number) => Promise<void>;
-  stopAll: () => void;
+  active: Active[];
+  pendingMixId: string | null;
+  toggle: (s: Sound) => void;
   runMix: (m: Mix) => void;
+  stopMix: (m: Mix) => void;
 }) {
   const choices = [
     ['brown', 'Коричневый шум'],
@@ -1248,36 +1332,53 @@ function Calm({
         Что будет комфортнее сейчас?
       </h1>
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        {choices.map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => {
-              stopAll();
-              const s = sounds.find((x) => x.id === id);
-              if (s) void start(s, 35);
-            }}
-            className="flex min-h-24 items-center justify-between rounded-[22px] bg-secondary p-5 text-left text-lg font-semibold"
-          >
-            <span>{label}</span>
-            <Play />
-          </button>
-        ))}
-        {mixes[0] && (
-          <button
-            onClick={() => runMix(mixes[0])}
-            className="flex min-h-24 items-center justify-between rounded-[22px] bg-secondary p-5 text-left text-lg font-semibold"
-          >
-            <span>Мой любимый микс</span>
-            <Play />
-          </button>
-        )}
-        <button
-          onClick={() => stopAll()}
-          className="flex min-h-24 items-center justify-between rounded-[22px] border p-5 text-left text-lg font-semibold"
-        >
-          <span>Тишина</span>
-          <Pause />
-        </button>
+        {choices.map(([id, label]) => {
+          const sound = sounds.find((item) => item.id === id);
+          if (!sound) return null;
+          const on = active.some((item) => item.id === id);
+          return (
+            <button
+              key={id}
+              onClick={() => toggle(sound)}
+              aria-pressed={on}
+              className={`flex min-h-24 items-center justify-between rounded-[22px] border p-5 text-left transition ${on ? 'border-primary bg-accent' : 'bg-secondary'}`}
+            >
+              <span>
+                <span className="block text-lg font-semibold">{label}</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {on ? 'Выключить звук' : 'Включить звук'}
+                </span>
+              </span>
+              {on ? <Pause /> : <Play />}
+            </button>
+          );
+        })}
+        {mixes[0] && (() => {
+          const mix = mixes[0];
+          const on =
+            pendingMixId === mix.id ||
+            mix.tracks.length > 0 &&
+            mix.tracks.every((track) =>
+              active.some((item) => item.id === track.id),
+            );
+          return (
+            <button
+              onClick={() => (on ? stopMix(mix) : runMix(mix))}
+              aria-pressed={on}
+              className={`flex min-h-24 items-center justify-between rounded-[22px] border p-5 text-left transition ${on ? 'border-primary bg-accent' : 'bg-secondary'}`}
+            >
+              <span>
+                <span className="block text-lg font-semibold">
+                  Мой любимый микс
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {on ? 'Выключить микс' : 'Включить микс'}
+                </span>
+              </span>
+              {on ? <Pause /> : <Play />}
+            </button>
+          );
+        })()}
       </div>
       <p className="mt-8 max-w-xl text-muted-foreground">
         Можно выбрать один вариант, вернуться назад или просто ничего не

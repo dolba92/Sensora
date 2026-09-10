@@ -1,4 +1,4 @@
-const CACHE = 'auto-v6';
+const CACHE = 'sensora-v12';
 const AUDIO = [
   'rain.mp3', 'heavy-rain.mp3', 'thunder.mp3', 'ocean.mp3', 'waves.mp3',
   'river.mp3', 'waterfall.mp3', 'forest.mp3', 'wind.mp3', 'birds.mp3',

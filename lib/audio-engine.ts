@@ -9,14 +9,25 @@ export class AudioEngine {
   private master?: GainNode;
   private tracks = new Map<string, Track>();
   private masterValue = 0.7;
-  private ensure() {
+  async ensureAudioContextRunning() {
+    if (this.context?.state === 'closed') {
+      this.context = undefined;
+      this.master = undefined;
+    }
     if (!this.context) {
-      this.context = new AudioContext();
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Web Audio API не поддерживается.');
+      this.context = new AudioContextClass();
       this.master = this.context.createGain();
       this.master.gain.value = this.masterValue;
       this.master.connect(this.context.destination);
     }
-    if (this.context.state === 'suspended') void this.context.resume();
+    if (this.context.state !== 'running') await this.context.resume();
+    if (this.context.state !== 'running')
+      throw new Error('Не удалось запустить AudioContext.');
     return this.context;
   }
   setMaster(value: number) {
@@ -26,7 +37,7 @@ export class AudioEngine {
   }
   async playFile(id: string, url: string, volume: number) {
     if (this.tracks.has(id)) return true;
-    const ctx = this.ensure();
+    const ctx = await this.ensureAudioContextRunning();
     const element = new Audio(url);
     element.loop = true;
     element.preload = 'auto';
@@ -49,9 +60,9 @@ export class AudioEngine {
       throw error;
     }
   }
-  playNoise(id: string, kind: NoiseKind, volume: number) {
+  async playNoise(id: string, kind: NoiseKind, volume: number) {
     if (this.tracks.has(id)) return true;
-    const ctx = this.ensure(),
+    const ctx = await this.ensureAudioContextRunning(),
       length = ctx.sampleRate * 8,
       buffer = ctx.createBuffer(1, length, ctx.sampleRate),
       data = buffer.getChannelData(0);
@@ -96,8 +107,8 @@ export class AudioEngine {
     if (track && this.context)
       track.gain.gain.setTargetAtTime(volume, this.context.currentTime, 0.06);
   }
-  playClick() {
-    const ctx = this.ensure(),
+  async playClick() {
+    const ctx = await this.ensureAudioContextRunning(),
       oscillator = ctx.createOscillator(),
       gain = ctx.createGain();
     oscillator.frequency.value = 330;
