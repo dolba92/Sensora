@@ -9,7 +9,7 @@ export class AudioEngine {
   private master?: GainNode;
   private tracks = new Map<string, Track>();
   private masterValue = 0.7;
-  async ensureAudioContextRunning() {
+  private getOrCreateAudioContext() {
     if (this.context?.state === 'closed') {
       this.context = undefined;
       this.master = undefined;
@@ -25,10 +25,14 @@ export class AudioEngine {
       this.master.gain.value = this.masterValue;
       this.master.connect(this.context.destination);
     }
-    if (this.context.state !== 'running') await this.context.resume();
-    if (this.context.state !== 'running')
-      throw new Error('Не удалось запустить AudioContext.');
     return this.context;
+  }
+  async ensureAudioContextRunning() {
+    const context = this.getOrCreateAudioContext();
+    if (context.state !== 'running') await context.resume();
+    if (context.state !== 'running')
+      throw new Error('Не удалось запустить AudioContext.');
+    return context;
   }
   setMaster(value: number) {
     this.masterValue = value;
@@ -62,8 +66,12 @@ export class AudioEngine {
   }
   async playNoise(id: string, kind: NoiseKind, volume: number) {
     if (this.tracks.has(id)) return true;
-    const ctx = await this.ensureAudioContextRunning(),
-      length = ctx.sampleRate * 8,
+    // iOS/WebKit may drop the user activation after awaiting resume(). Create,
+    // connect and start the buffer source synchronously in the original tap.
+    const ctx = this.getOrCreateAudioContext();
+    const resumePromise =
+      ctx.state === 'running' ? Promise.resolve() : ctx.resume();
+    const length = ctx.sampleRate * 8,
       buffer = ctx.createBuffer(1, length, ctx.sampleRate),
       data = buffer.getChannelData(0);
     let brown = 0,
@@ -98,9 +106,20 @@ export class AudioEngine {
     gain.gain.setValueAtTime(0, ctx.currentTime);
     gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 1.2);
     source.connect(gain).connect(this.master!);
-    source.start();
-    this.tracks.set(id, { gain, source });
-    return true;
+    const track = { gain, source };
+    this.tracks.set(id, track);
+    try {
+      source.start(0);
+      await resumePromise;
+      if (ctx.state !== 'running')
+        throw new Error('Не удалось запустить AudioContext.');
+      if (this.tracks.get(id)?.source !== source) return false;
+      return true;
+    } catch (error) {
+      if (this.tracks.get(id)?.source === source) this.tracks.delete(id);
+      this.disposeTrack(track);
+      throw error;
+    }
   }
   setVolume(id: string, volume: number) {
     const track = this.tracks.get(id);
