@@ -69,8 +69,6 @@ export class AudioEngine {
   async playNoise(id: string, kind: NoiseKind, volume: number) {
     if (this.tracks.has(id)) return true;
     const ctx = this.getOrCreateAudioContext();
-    const resumePromise =
-      ctx.state === 'running' ? Promise.resolve() : ctx.resume();
     const source = ctx.createBufferSource();
     source.buffer = this.getNoiseBuffer(ctx, kind);
     source.loop = true;
@@ -84,13 +82,13 @@ export class AudioEngine {
     this.tracks.set(id, track);
     this.logNoise('before resume', ctx, gain);
     try {
-      await resumePromise;
+      source.start();
+      this.logNoise('source started', ctx, gain);
+      if (ctx.state !== 'running') await ctx.resume();
       if (ctx.state !== 'running')
         throw new Error('Не удалось запустить AudioContext.');
       if (this.tracks.get(id)?.source !== source) return false;
       this.logNoise('after resume', ctx, gain);
-      source.start();
-      this.logNoise('source started', ctx, gain);
       return true;
     } catch (error) {
       if (this.tracks.get(id)?.source === source) this.tracks.delete(id);
