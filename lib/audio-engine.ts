@@ -1,9 +1,9 @@
 export type NoiseKind = 'white' | 'pink' | 'brown';
 
 type Track = {
-  gain: GainNode;
-  source: AudioBufferSourceNode | MediaElementAudioSourceNode;
-  element?: HTMLAudioElement;
+  element: HTMLAudioElement;
+  volume: number;
+  fadeTimer?: number;
 };
 
 export class AudioEngine {
@@ -56,13 +56,12 @@ export class AudioEngine {
   }
 
   setMaster(value: number) {
-    this.masterValue = value;
+    this.masterValue = Math.min(1, Math.max(0, value));
 
-    if (this.context) {
-      this.master?.gain.setTargetAtTime(
-        value,
-        this.context.currentTime,
-        0.08,
+    for (const track of this.tracks.values()) {
+      track.element.volume = Math.min(
+        1,
+        Math.max(0, track.volume * this.masterValue),
       );
     }
 
@@ -74,57 +73,104 @@ export class AudioEngine {
     }
   }
 
+  private configureBackgroundPlayback(element: HTMLAudioElement) {
+    element.preload = 'auto';
+    element.loop = true;
+    element.playsInline = true;
+
+    const navigatorWithAudioSession = navigator as Navigator & {
+      audioSession?: { type: string };
+    };
+
+    try {
+      if (navigatorWithAudioSession.audioSession) {
+        navigatorWithAudioSession.audioSession.type = 'playback';
+      }
+    } catch {}
+  }
+
+  private fadeElementTo(
+    track: Track,
+    target: number,
+    durationSeconds: number,
+    onComplete?: () => void,
+  ) {
+    if (track.fadeTimer) {
+      window.clearInterval(track.fadeTimer);
+      track.fadeTimer = undefined;
+    }
+
+    const element = track.element;
+    const startVolume = element.volume;
+    const safeTarget = Math.min(1, Math.max(0, target));
+
+    if (durationSeconds <= 0) {
+      element.volume = safeTarget;
+      onComplete?.();
+      return;
+    }
+
+    const startedAt = performance.now();
+    const durationMs = durationSeconds * 1000;
+
+    track.fadeTimer = window.setInterval(() => {
+      const progress = Math.min(
+        1,
+        (performance.now() - startedAt) / durationMs,
+      );
+
+      element.volume =
+        startVolume + (safeTarget - startVolume) * progress;
+
+      if (progress >= 1) {
+        if (track.fadeTimer) {
+          window.clearInterval(track.fadeTimer);
+          track.fadeTimer = undefined;
+        }
+        onComplete?.();
+      }
+    }, 30);
+  }
+
   async playFile(id: string, url: string, volume: number) {
     if (this.tracks.has(id)) return true;
 
-    const ctx = await this.ensureAudioContextRunning();
+    const safeVolume = Number.isFinite(volume)
+      ? Math.min(1, Math.max(0, volume))
+      : 0.45;
 
     const element = new Audio(url);
-    element.loop = true;
-    element.preload = 'auto';
+    this.configureBackgroundPlayback(element);
+    element.volume = 0;
 
-    const source = ctx.createMediaElementSource(element);
-    const gain = ctx.createGain();
-
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(
-      volume,
-      ctx.currentTime + 1.2,
-    );
-
-    source.connect(gain).connect(this.master!);
-
-    this.tracks.set(id, {
-      gain,
-      source,
+    const track: Track = {
       element,
-    });
+      volume: safeVolume,
+    };
+
+    this.tracks.set(id, track);
 
     try {
       await element.play();
 
-      if (this.tracks.get(id)?.source !== source) {
-        this.disposeTrack({
-          gain,
-          source,
-          element,
-        });
-
+      if (this.tracks.get(id) !== track) {
+        this.disposeTrack(track);
         return false;
       }
 
+      this.fadeElementTo(
+        track,
+        safeVolume * this.masterValue,
+        1.2,
+      );
+
       return true;
     } catch (error) {
-      if (this.tracks.get(id)?.source === source) {
+      if (this.tracks.get(id) === track) {
         this.tracks.delete(id);
       }
 
-      this.disposeTrack({
-        gain,
-        source,
-        element,
-      });
-
+      this.disposeTrack(track);
       throw error;
     }
   }
@@ -136,41 +182,25 @@ export class AudioEngine {
   ) {
     if (this.tracks.has(id)) return true;
 
-    const ctx = await this.ensureAudioContextRunning();
-
-    /*
-     * На мобильных устройствах программно созданный
-     * AudioBufferSourceNode может вести себя нестабильно.
-     *
-     * Поэтому генерируем настоящий WAV-файл в памяти приложения
-     * и воспроизводим его через HTMLAudioElement —
-     * тем же путём, которым воспроизводятся обычные звуки Sensora.
-     */
-
-    const noiseUrl = this.getNoiseUrl(kind);
-
-    const element = new Audio(noiseUrl);
-    element.loop = true;
-    element.preload = 'auto';
-
-    const source = ctx.createMediaElementSource(element);
-    const gain = ctx.createGain();
-
     const safeVolume = Number.isFinite(volume)
       ? Math.min(1, Math.max(0, volume))
       : 0.45;
 
-    gain.gain.setValueAtTime(
-      safeVolume,
-      ctx.currentTime,
-    );
+    /*
+     * Шумы остаются настоящими WAV-файлами в памяти, но теперь
+     * воспроизводятся напрямую через HTMLAudioElement.
+     * Это не привязывает их к AudioContext, который iOS/WebKit
+     * может приостанавливать при блокировке экрана.
+     */
+    const noiseUrl = this.getNoiseUrl(kind);
 
-    source.connect(gain).connect(this.master!);
+    const element = new Audio(noiseUrl);
+    this.configureBackgroundPlayback(element);
+    element.volume = safeVolume * this.masterValue;
 
     const track: Track = {
-      gain,
-      source,
       element,
+      volume: safeVolume,
     };
 
     this.tracks.set(id, track);
@@ -178,14 +208,14 @@ export class AudioEngine {
     try {
       await element.play();
 
-      if (this.tracks.get(id)?.source !== source) {
+      if (this.tracks.get(id) !== track) {
         this.disposeTrack(track);
         return false;
       }
 
       return true;
     } catch (error) {
-      if (this.tracks.get(id)?.source === source) {
+      if (this.tracks.get(id) === track) {
         this.tracks.delete(id);
       }
 
@@ -437,13 +467,13 @@ export class AudioEngine {
   setVolume(id: string, volume: number) {
     const track = this.tracks.get(id);
 
-    if (track && this.context) {
-      track.gain.gain.setTargetAtTime(
-        volume,
-        this.context.currentTime,
-        0.06,
-      );
-    }
+    if (!track) return;
+
+    track.volume = Math.min(1, Math.max(0, volume));
+    track.element.volume = Math.min(
+      1,
+      Math.max(0, track.volume * this.masterValue),
+    );
   }
 
   async startMetronome(bpm: number) {
@@ -521,30 +551,20 @@ export class AudioEngine {
   }
 
   private disposeTrack(track: Track) {
-    try {
-      if (track.element) {
-        track.element.pause();
-        track.element.removeAttribute('src');
-        track.element.load();
-      } else {
-        (
-          track.source as AudioBufferSourceNode
-        ).stop();
-      }
-    } catch {}
+    if (track.fadeTimer) {
+      window.clearInterval(track.fadeTimer);
+      track.fadeTimer = undefined;
+    }
 
     try {
-      track.source.disconnect();
-    } catch {}
-
-    try {
-      track.gain.disconnect();
+      track.element.pause();
+      track.element.removeAttribute('src');
+      track.element.load();
     } catch {}
   }
 
   stop(id: string, fade = 0.12) {
-    const track =
-      this.tracks.get(id);
+    const track = this.tracks.get(id);
 
     if (!track) {
       return;
@@ -552,30 +572,14 @@ export class AudioEngine {
 
     this.tracks.delete(id);
 
-    if (!this.context || fade <= 0) {
+    if (fade <= 0) {
       this.disposeTrack(track);
       return;
     }
 
-    const now =
-      this.context.currentTime;
-
-    track.gain.gain.cancelScheduledValues(now);
-
-    track.gain.gain.setValueAtTime(
-      track.gain.gain.value,
-      now,
-    );
-
-    track.gain.gain.linearRampToValueAtTime(
-      0,
-      now + fade,
-    );
-
-    window.setTimeout(
-      () => this.disposeTrack(track),
-      fade * 1000 + 30,
-    );
+    this.fadeElementTo(track, 0, fade, () => {
+      this.disposeTrack(track);
+    });
   }
 
   stopAll(fade = 0) {
