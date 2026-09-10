@@ -282,7 +282,6 @@ export default function Home() {
   );
   const [bpm, setBpm] = useState(60);
   const [metroOn, setMetroOn] = useState(false);
-  const metroRef = useRef<number | undefined>(undefined);
   const pendingMixRef = useRef<number | undefined>(undefined);
   const allSounds = useMemo(
     () => [
@@ -367,20 +366,6 @@ export default function Home() {
     );
     return () => clearInterval(tick);
   }, [timer, fade]);
-  useEffect(() => {
-    if (!metroOn) {
-      if (metroRef.current) clearInterval(metroRef.current);
-      return;
-    }
-    const click = () => {
-      const current = engine.current;
-      if (current) void current.playClick().catch(() => setMetroOn(false));
-    };
-    metroRef.current = window.setInterval(click, 60000 / bpm);
-    return () => {
-      if (metroRef.current) clearInterval(metroRef.current);
-    };
-  }, [metroOn, bpm]);
   const start = useCallback(
     async (sound: Sound, requestedVolume?: number) => {
       const soundVolume = requestedVolume ?? soundVolumes[sound.id] ?? 45;
@@ -451,17 +436,23 @@ export default function Home() {
   };
   const changeMetronome = async (next: boolean) => {
     if (!next) {
+      engine.current?.stopMetronome();
       setMetroOn(false);
       return;
     }
 
     try {
-      await engine.current?.playClick();
+      await engine.current?.startMetronome(bpm);
       setMetroOn(true);
     } catch {
       setMetroOn(false);
       setNotice('Не удалось запустить звук метронома');
     }
+  };
+  const changeMetronomeBpm = (next: number) => {
+    const safeBpm = Math.min(240, Math.max(20, next));
+    setBpm(safeBpm);
+    engine.current?.setMetronomeBpm(safeBpm);
   };
   const saveMix = () => {
     if (!mixName.trim() || !active.length) return;
@@ -623,7 +614,7 @@ export default function Home() {
           ) : section === 'metronome' ? (
             <Metronome
               bpm={bpm}
-              setBpm={setBpm}
+              setBpm={changeMetronomeBpm}
               on={metroOn}
               setOn={(next) => void changeMetronome(next)}
             />
