@@ -11,6 +11,8 @@ export class AudioEngine {
   private master?: GainNode;
   private tracks = new Map<string, Track>();
   private noiseUrls = new Map<NoiseKind, string>();
+  private metronomeUrl?: string;
+  private metronomeElement?: HTMLAudioElement;
   private masterValue = 0.7;
 
   private getOrCreateAudioContext() {
@@ -61,6 +63,13 @@ export class AudioEngine {
         value,
         this.context.currentTime,
         0.08,
+      );
+    }
+
+    if (this.metronomeElement) {
+      this.metronomeElement.volume = Math.min(
+        1,
+        Math.max(0, this.masterValue * 0.55),
       );
     }
   }
@@ -438,47 +447,57 @@ export class AudioEngine {
   }
 
   async playClick() {
-    const ctx =
-      await this.ensureAudioContextRunning();
+    if (!this.metronomeUrl) {
+      this.metronomeUrl = this.createMetronomeClickUrl();
+    }
 
-    const oscillator =
-      ctx.createOscillator();
+    if (!this.metronomeElement) {
+      const element = new Audio(this.metronomeUrl);
+      element.preload = 'auto';
+      this.metronomeElement = element;
+    }
 
-    const gain =
-      ctx.createGain();
+    const element = this.metronomeElement;
 
-    oscillator.frequency.value = 330;
-
-    gain.gain.setValueAtTime(
-      0.12,
-      ctx.currentTime,
+    element.volume = Math.min(
+      1,
+      Math.max(0, this.masterValue * 0.55),
     );
 
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      ctx.currentTime + 0.09,
+    try {
+      element.pause();
+      element.currentTime = 0;
+    } catch {}
+
+    await element.play();
+  }
+
+  private createMetronomeClickUrl() {
+    const sampleRate = 44100;
+    const durationSeconds = 0.09;
+    const length = Math.floor(
+      sampleRate * durationSeconds,
     );
 
-    oscillator
-      .connect(gain)
-      .connect(this.master!);
+    const samples = new Float32Array(length);
 
-    oscillator.addEventListener(
-      'ended',
-      () => {
-        oscillator.disconnect();
-        gain.disconnect();
-      },
-      {
-        once: true,
-      },
+    for (let i = 0; i < length; i++) {
+      const time = i / sampleRate;
+      const envelope = Math.exp(-time * 45);
+
+      const tone =
+        Math.sin(2 * Math.PI * 850 * time) * 0.75 +
+        Math.sin(2 * Math.PI * 1250 * time) * 0.25;
+
+      samples[i] = tone * envelope * 0.65;
+    }
+
+    const blob = this.createNoiseWav(
+      samples,
+      sampleRate,
     );
 
-    oscillator.start();
-
-    oscillator.stop(
-      ctx.currentTime + 0.1,
-    );
+    return URL.createObjectURL(blob);
   }
 
   private disposeTrack(track: Track) {

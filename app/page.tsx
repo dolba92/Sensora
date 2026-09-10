@@ -376,7 +376,6 @@ export default function Home() {
       const current = engine.current;
       if (current) void current.playClick().catch(() => setMetroOn(false));
     };
-    click();
     metroRef.current = window.setInterval(click, 60000 / bpm);
     return () => {
       if (metroRef.current) clearInterval(metroRef.current);
@@ -455,10 +454,12 @@ export default function Home() {
       setMetroOn(false);
       return;
     }
+
     try {
-      await engine.current?.ensureAudioContextRunning();
+      await engine.current?.playClick();
       setMetroOn(true);
     } catch {
+      setMetroOn(false);
       setNotice('Не удалось запустить звук метронома');
     }
   };
