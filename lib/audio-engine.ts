@@ -1,3 +1,4 @@
+
 export type NoiseKind = 'white' | 'pink' | 'brown';
 
 type Track = {
@@ -10,7 +11,6 @@ export class AudioEngine {
   private context?: AudioContext;
   private master?: GainNode;
   private tracks = new Map<string, Track>();
-  private noiseUrls = new Map<NoiseKind, string>();
   private metronomeUrl?: string;
   private metronomeElement?: HTMLAudioElement;
   private masterValue = 0.7;
@@ -127,6 +127,7 @@ export class AudioEngine {
           window.clearInterval(track.fadeTimer);
           track.fadeTimer = undefined;
         }
+
         onComplete?.();
       }
     }, 30);
@@ -187,12 +188,12 @@ export class AudioEngine {
       : 0.45;
 
     /*
-     * Шумы остаются настоящими WAV-файлами в памяти, но теперь
-     * воспроизводятся напрямую через HTMLAudioElement.
-     * Это не привязывает их к AudioContext, который iOS/WebKit
-     * может приостанавливать при блокировке экрана.
+     * White, pink and brown noise are stored as long MP3 files.
+     * They are played directly through HTMLAudioElement so that
+     * iOS/WebKit can continue playback while the screen is locked
+     * or the app is in the background.
      */
-    const noiseUrl = this.getNoiseUrl(kind);
+    const noiseUrl = `/audio/${kind}-noise.mp3`;
 
     const element = new Audio(noiseUrl);
     this.configureBackgroundPlayback(element);
@@ -224,108 +225,10 @@ export class AudioEngine {
     }
   }
 
-  private getNoiseUrl(kind: NoiseKind) {
-    const cached = this.noiseUrls.get(kind);
-
-    if (cached) {
-      return cached;
-    }
-
-    const sampleRate = 44100;
-    const durationSeconds = 120;
-    const length = sampleRate * durationSeconds;
-
-    const samples = new Float32Array(length);
-
-    let brown = 0;
-
-    let b0 = 0;
-    let b1 = 0;
-    let b2 = 0;
-    let b3 = 0;
-    let b4 = 0;
-    let b5 = 0;
-    let b6 = 0;
-
-    for (let i = 0; i < length; i++) {
-      const white = Math.random() * 2 - 1;
-
-      if (kind === 'white') {
-        /*
-         * Белый шум:
-         * одинаковая энергия по всему спектру.
-         */
-        samples[i] = white * 0.42;
-      } else if (kind === 'brown') {
-        /*
-         * Коричневый шум:
-         * интегрированный белый шум,
-         * сильнее выражены низкие частоты.
-         */
-        brown =
-          (brown + 0.02 * white) /
-          1.02;
-
-        samples[i] = brown * 3.3;
-      } else {
-        /*
-         * Розовый шум:
-         * фильтрация белого шума,
-         * уменьшающая энергию высоких частот.
-         */
-        b0 =
-          0.99886 * b0 +
-          white * 0.0555179;
-
-        b1 =
-          0.99332 * b1 +
-          white * 0.0750759;
-
-        b2 =
-          0.969 * b2 +
-          white * 0.153852;
-
-        b3 =
-          0.8665 * b3 +
-          white * 0.3104856;
-
-        b4 =
-          0.55 * b4 +
-          white * 0.5329522;
-
-        b5 =
-          -0.7616 * b5 -
-          white * 0.016898;
-
-        samples[i] =
-          (
-            b0 +
-            b1 +
-            b2 +
-            b3 +
-            b4 +
-            b5 +
-            b6 +
-            white * 0.5362
-          ) *
-          0.11;
-
-        b6 = white * 0.115926;
-      }
-    }
-
-    const blob = this.createNoiseWav(
-      samples,
-      sampleRate,
-    );
-
-    const url = URL.createObjectURL(blob);
-
-    this.noiseUrls.set(kind, url);
-
-    return url;
-  }
-
+  /*
+   * Creates a short WAV Blob.
+   * This is still used by the metronome loop.
+   */
   private createNoiseWav(
     samples: Float32Array,
     sampleRate: number,
@@ -359,7 +262,6 @@ export class AudioEngine {
     /*
      * WAV / RIFF header
      */
-
     writeString(0, 'RIFF');
 
     view.setUint32(
@@ -369,7 +271,6 @@ export class AudioEngine {
     );
 
     writeString(8, 'WAVE');
-
     writeString(12, 'fmt ');
 
     view.setUint32(
@@ -470,6 +371,7 @@ export class AudioEngine {
     if (!track) return;
 
     track.volume = Math.min(1, Math.max(0, volume));
+
     track.element.volume = Math.min(
       1,
       Math.max(0, track.volume * this.masterValue),
@@ -508,10 +410,14 @@ export class AudioEngine {
   }
 
   setMetronomeBpm(bpm: number) {
-    const safeBpm = Math.min(240, Math.max(20, bpm));
+    const safeBpm = Math.min(
+      240,
+      Math.max(20, bpm),
+    );
 
     if (this.metronomeElement) {
-      this.metronomeElement.playbackRate = safeBpm / 60;
+      this.metronomeElement.playbackRate =
+        safeBpm / 60;
     }
   }
 
@@ -529,8 +435,12 @@ export class AudioEngine {
   private createMetronomeLoopUrl() {
     const sampleRate = 44100;
     const durationSeconds = 1;
-    const length = Math.floor(sampleRate * durationSeconds);
-    const clickLength = Math.floor(sampleRate * 0.09);
+    const length = Math.floor(
+      sampleRate * durationSeconds,
+    );
+    const clickLength = Math.floor(
+      sampleRate * 0.09,
+    );
 
     const samples = new Float32Array(length);
 
@@ -542,10 +452,14 @@ export class AudioEngine {
         Math.sin(2 * Math.PI * 850 * time) * 0.75 +
         Math.sin(2 * Math.PI * 1250 * time) * 0.25;
 
-      samples[i] = tone * envelope * 0.65;
+      samples[i] =
+        tone * envelope * 0.65;
     }
 
-    const blob = this.createNoiseWav(samples, sampleRate);
+    const blob = this.createNoiseWav(
+      samples,
+      sampleRate,
+    );
 
     return URL.createObjectURL(blob);
   }
@@ -577,9 +491,14 @@ export class AudioEngine {
       return;
     }
 
-    this.fadeElementTo(track, 0, fade, () => {
-      this.disposeTrack(track);
-    });
+    this.fadeElementTo(
+      track,
+      0,
+      fade,
+      () => {
+        this.disposeTrack(track);
+      },
+    );
   }
 
   stopAll(fade = 0) {
