@@ -78,14 +78,6 @@ export class AudioEngine {
     element.playsInline = true;
     element.volume = 1;
 
-    /*
-     * Give the browser a head start on large 20-minute MP3 files.
-     * This does not change the playback path; it only begins loading sooner.
-     */
-    try {
-      element.load();
-    } catch {}
-
     const navigatorWithAudioSession = navigator as Navigator & {
       audioSession?: { type: string };
     };
@@ -166,16 +158,9 @@ export class AudioEngine {
       ? Math.min(1, Math.max(0, volume))
       : 0.45;
 
+    const context = await this.ensureAudioContextRunning();
     const element = new Audio(url);
     this.configurePlayback(element);
-
-    /*
-     * Start fetching the media first, then make sure Web Audio is active.
-     * On slower/mobile connections this reduces the time before playback starts.
-     */
-    const contextPromise = this.ensureAudioContextRunning();
-
-    const context = await contextPromise;
 
     const track = this.createTrack(
       context,
@@ -216,13 +201,11 @@ export class AudioEngine {
       ? Math.min(1, Math.max(0, volume))
       : 0.45;
 
+    const context = await this.ensureAudioContextRunning();
     const noiseUrl = `/audio/${kind}-noise.mp3`;
 
     const element = new Audio(noiseUrl);
     this.configurePlayback(element);
-
-    const contextPromise = this.ensureAudioContextRunning();
-    const context = await contextPromise;
 
     const track = this.createTrack(
       context,
