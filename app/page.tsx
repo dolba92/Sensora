@@ -624,6 +624,7 @@ export default function Home() {
               runMix={runMix}
               stopMix={stopMix}
               setMixes={setMixes}
+              setVolume={setSoundVolume}
             />
           ) : section === 'metronome' ? (
             <Metronome
@@ -894,6 +895,7 @@ function Mixes({
   runMix,
   stopMix,
   setMixes,
+  setVolume,
 }: {
   mixes: Mix[];
   allSounds: Sound[];
@@ -902,65 +904,164 @@ function Mixes({
   runMix: (m: Mix) => void;
   stopMix: (m: Mix) => void;
   setMixes: React.Dispatch<React.SetStateAction<Mix[]>>;
+  setVolume: (id: string, value: number) => void;
 }) {
+  const changeTrackVolume = (
+    mixId: string,
+    trackId: string,
+    value: number,
+  ) => {
+    setMixes((items) =>
+      items.map((mix) =>
+        mix.id === mixId
+          ? {
+              ...mix,
+              tracks: mix.tracks.map((track) =>
+                track.id === trackId
+                  ? { ...track, volume: value }
+                  : track,
+              ),
+            }
+          : mix,
+      ),
+    );
+
+    setVolume(trackId, value);
+  };
+
   return (
-    <section className="glass rounded-[28px] p-6 md:p-8">
+    <section className="glass rounded-[28px] p-5 md:p-8">
       <p className="text-sm text-muted-foreground">Ваши сочетания</p>
       <h1 className="text-3xl font-semibold">Мои миксы</h1>
+
       {mixes.length ? (
-        <div className="mt-6 grid gap-3">
+        <div className="mt-6 grid gap-4">
           {mixes.map((m) => {
             const on =
               pendingMixId === m.id ||
-              m.tracks.length > 0 &&
-              m.tracks.every((track) =>
-                active.some((item) => item.id === track.id),
-              );
+              (m.tracks.length > 0 &&
+                m.tracks.every((track) =>
+                  active.some((item) => item.id === track.id),
+                ));
+
             return (
               <div
                 key={m.id}
-                className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 ${on ? 'bg-accent' : 'bg-background/35'}`}
+                className={`rounded-2xl border p-4 md:p-5 ${
+                  on ? 'bg-accent' : 'bg-background/35'
+                }`}
               >
-              <div>
-                <h2 className="font-semibold">{m.name}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {m.tracks
-                    .map((t) => allSounds.find((s) => s.id === t.id)?.name)
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => (on ? stopMix(m) : runMix(m))}
-                  aria-pressed={on}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 font-medium text-primary-foreground"
-                >
-                  {on ? <Pause size={17} /> : <Play size={17} />}
-                  {on ? 'Выключить' : 'Запустить'}
-                </button>
-                <button
-                  onClick={() => {
-                    const name = prompt('Новое название', m.name);
-                    if (name)
-                      setMixes((v) =>
-                        v.map((x) => (x.id === m.id ? { ...x, name } : x)),
-                      );
-                  }}
-                  className="min-h-11 rounded-xl border px-3"
-                >
-                  Переименовать
-                </button>
-                <button
-                  onClick={() =>
-                    setMixes((v) => v.filter((x) => x.id !== m.id))
-                  }
-                  className="size-11 rounded-xl border text-destructive"
-                  aria-label={`Удалить ${m.name}`}
-                >
-                  <Trash2 className="mx-auto" size={18} />
-                </button>
-              </div>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <h2 className="font-semibold">{m.name}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {m.tracks
+                        .map(
+                          (track) =>
+                            allSounds.find(
+                              (sound) => sound.id === track.id,
+                            )?.name,
+                        )
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => (on ? stopMix(m) : runMix(m))}
+                      aria-pressed={on}
+                      className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 font-medium text-primary-foreground"
+                    >
+                      {on ? <Pause size={17} /> : <Play size={17} />}
+                      {on ? 'Выключить' : 'Запустить'}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const name = prompt('Новое название', m.name);
+                        if (name) {
+                          setMixes((items) =>
+                            items.map((mix) =>
+                              mix.id === m.id
+                                ? { ...mix, name }
+                                : mix,
+                            ),
+                          );
+                        }
+                      }}
+                      className="min-h-11 rounded-xl border px-3"
+                    >
+                      Переименовать
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setMixes((items) =>
+                          items.filter((mix) => mix.id !== m.id),
+                        )
+                      }
+                      className="size-11 shrink-0 rounded-xl border text-destructive"
+                      aria-label={`Удалить ${m.name}`}
+                    >
+                      <Trash2 className="mx-auto" size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-3 border-t pt-4">
+                  {m.tracks.map((track) => {
+                    const sound = allSounds.find(
+                      (item) => item.id === track.id,
+                    );
+
+                    if (!sound) return null;
+
+                    const liveTrack = active.find(
+                      (item) => item.id === track.id,
+                    );
+
+                    const volume =
+                      liveTrack?.volume ?? track.volume ?? 45;
+
+                    return (
+                      <div
+                        key={track.id}
+                        className="rounded-xl bg-background/35 px-3 py-3"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <span className="min-w-0 truncate text-sm font-medium">
+                            {sound.name}
+                          </span>
+                          <span className="w-10 shrink-0 text-right text-xs text-muted-foreground">
+                            {volume}%
+                          </span>
+                        </div>
+
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Volume2
+                            className="shrink-0 text-muted-foreground"
+                            size={16}
+                          />
+                          <Slider
+                            className="mix-slider min-w-0 flex-1"
+                            aria-label={`Громкость ${sound.name} в миксе ${m.name}`}
+                            value={[volume]}
+                            onValueChange={(value) =>
+                              changeTrackVolume(
+                                m.id,
+                                track.id,
+                                Array.isArray(value)
+                                  ? value[0]
+                                  : value,
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
@@ -973,6 +1074,7 @@ function Mixes({
     </section>
   );
 }
+
 function Metronome({
   bpm,
   setBpm,
