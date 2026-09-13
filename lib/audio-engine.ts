@@ -4,17 +4,6 @@ type Track = {
   element: HTMLAudioElement;
   volume: number;
   fadeTimer?: number;
-
-  /*
-   * Used only for the experimental rain hybrid.
-   *
-   * element = direct/background HTMLAudioElement
-   * foregroundElement = visible-page media element routed through Web Audio
-   */
-  hybrid?: boolean;
-  foregroundElement?: HTMLAudioElement;
-  foregroundSource?: MediaElementAudioSourceNode;
-  foregroundGain?: GainNode;
 };
 
 export class AudioEngine {
@@ -24,27 +13,6 @@ export class AudioEngine {
   private metronomeUrl?: string;
   private metronomeElement?: HTMLAudioElement;
   private masterValue = 0.7;
-
-  constructor() {
-    document.addEventListener(
-      'visibilitychange',
-      this.handleVisibilityChange,
-    );
-  }
-
-  private handleVisibilityChange = () => {
-    for (const track of this.tracks.values()) {
-      if (!track.hybrid) {
-        continue;
-      }
-
-      if (document.hidden) {
-        this.switchHybridToBackground(track);
-      } else {
-        void this.switchHybridToForeground(track);
-      }
-    }
-  };
 
   private getOrCreateAudioContext() {
     if (this.context?.state === 'closed') {
@@ -88,60 +56,20 @@ export class AudioEngine {
   }
 
   setMaster(value: number) {
-    this.masterValue = Math.min(
-      1,
-      Math.max(0, value),
-    );
+    this.masterValue = Math.min(1, Math.max(0, value));
 
     for (const track of this.tracks.values()) {
-      if (
-        track.hybrid &&
-        track.foregroundGain
-      ) {
-        track.foregroundGain.gain.value =
-          Math.min(
-            1,
-            Math.max(
-              0,
-              track.volume * this.masterValue,
-            ),
-          );
-
-        /*
-         * Keep this value updated too.
-         * iOS may ignore it for the direct background element,
-         * but other browsers can still honour it.
-         */
-        track.element.volume =
-          Math.min(
-            1,
-            Math.max(
-              0,
-              track.volume * this.masterValue,
-            ),
-          );
-
-        continue;
-      }
-
       track.element.volume = Math.min(
         1,
-        Math.max(
-          0,
-          track.volume * this.masterValue,
-        ),
+        Math.max(0, track.volume * this.masterValue),
       );
     }
 
     if (this.metronomeElement) {
-      this.metronomeElement.volume =
-        Math.min(
-          1,
-          Math.max(
-            0,
-            this.masterValue * 0.55,
-          ),
-        );
+      this.metronomeElement.volume = Math.min(
+        1,
+        Math.max(0, this.masterValue * 0.55),
+      );
     }
   }
 
@@ -225,26 +153,6 @@ export class AudioEngine {
       }, 30);
   }
 
-  private isExperimentalRain(
-    url: string,
-  ) {
-    try {
-      const parsed = new URL(
-        url,
-        window.location.href,
-      );
-
-      return (
-        parsed.pathname ===
-        '/audio/rain.mp3'
-      );
-    } catch {
-      return url.includes(
-        '/audio/rain.mp3',
-      );
-    }
-  }
-
   async playFile(
     id: string,
     url: string,
@@ -254,13 +162,6 @@ export class AudioEngine {
       return true;
     }
 
-    if (this.isExperimentalRain(url)) {
-      return this.playHybridRain(
-        id,
-        url,
-        volume,
-      );
-    }
 
     const safeVolume =
       Number.isFinite(volume)
@@ -312,228 +213,6 @@ export class AudioEngine {
 
       this.disposeTrack(track);
       throw error;
-    }
-  }
-
-  private async playHybridRain(
-    id: string,
-    url: string,
-    volume: number,
-  ) {
-    const safeVolume =
-      Number.isFinite(volume)
-        ? Math.min(
-            1,
-            Math.max(0, volume),
-          )
-        : 0.45;
-
-    /*
-     * Direct element:
-     * keeps playing while the page is visible,
-     * but stays muted until the page goes
-     * into the background.
-     */
-    const backgroundElement =
-      new Audio(url);
-
-    this.configureBackgroundPlayback(
-      backgroundElement,
-    );
-
-    backgroundElement.muted = true;
-    backgroundElement.volume =
-      safeVolume *
-      this.masterValue;
-
-    /*
-     * Foreground element:
-     * routed through Web Audio so that the
-     * in-app volume slider works while the
-     * page is visible.
-     */
-    const foregroundElement =
-      new Audio(url);
-
-    foregroundElement.preload = 'auto';
-    foregroundElement.loop = true;
-    foregroundElement.playsInline = true;
-
-    const context =
-      await this.ensureAudioContextRunning();
-
-    const foregroundSource =
-      context.createMediaElementSource(
-        foregroundElement,
-      );
-
-    const foregroundGain =
-      context.createGain();
-
-    foregroundGain.gain.value = Math.min(
-      1,
-      Math.max(
-        0,
-        safeVolume *
-          this.masterValue,
-      ),
-    );
-
-    foregroundSource.connect(
-      foregroundGain,
-    );
-
-    foregroundGain.connect(
-      context.destination,
-    );
-
-    const track: Track = {
-      element: backgroundElement,
-      volume: safeVolume,
-      hybrid: true,
-      foregroundElement,
-      foregroundSource,
-      foregroundGain,
-    };
-
-    this.tracks.set(id, track);
-
-    try {
-      /*
-       * Both are started from the original
-       * user gesture.
-       *
-       * The direct copy is already alive
-       * before iOS locks the screen, but is
-       * muted while the page is visible.
-       */
-      await Promise.all([
-        backgroundElement.play(),
-        foregroundElement.play(),
-      ]);
-
-      if (
-        this.tracks.get(id) !== track
-      ) {
-        this.disposeTrack(track);
-        return false;
-      }
-
-      if (document.hidden) {
-        this.switchHybridToBackground(
-          track,
-        );
-      }
-
-      return true;
-    } catch (error) {
-      if (
-        this.tracks.get(id) === track
-      ) {
-        this.tracks.delete(id);
-      }
-
-      this.disposeTrack(track);
-
-      throw error;
-    }
-  }
-
-  private switchHybridToBackground(
-    track: Track,
-  ) {
-    const foreground =
-      track.foregroundElement;
-
-    if (!foreground) {
-      return;
-    }
-
-    try {
-      /*
-       * Synchronise the direct player
-       * with the Web Audio player before
-       * making it audible.
-       */
-      if (
-        Number.isFinite(
-          foreground.currentTime,
-        )
-      ) {
-        const difference = Math.abs(
-          track.element.currentTime -
-            foreground.currentTime,
-        );
-
-        if (difference > 0.15) {
-          track.element.currentTime =
-            foreground.currentTime;
-        }
-      }
-    } catch {}
-
-    /*
-     * The direct element has already been
-     * playing muted, so this does not need
-     * a new play() call after screen lock.
-     */
-    track.element.muted = false;
-
-    try {
-      foreground.pause();
-    } catch {}
-  }
-
-  private async switchHybridToForeground(
-    track: Track,
-  ) {
-    const foreground =
-      track.foregroundElement;
-
-    if (!foreground) {
-      return;
-    }
-
-    /*
-     * Mute the direct/background copy first
-     * to avoid two audible copies.
-     */
-    track.element.muted = true;
-
-    try {
-      if (
-        Number.isFinite(
-          track.element.currentTime,
-        )
-      ) {
-        foreground.currentTime =
-          track.element.currentTime;
-      }
-    } catch {}
-
-    try {
-      const context =
-        this.getOrCreateAudioContext();
-
-      if (
-        context.state !== 'running'
-      ) {
-        await context.resume();
-      }
-    } catch {}
-
-    try {
-      if (foreground.paused) {
-        await foreground.play();
-      }
-    } catch {
-      /*
-       * Some iOS versions may demand another
-       * user gesture after returning from
-       * background. If that happens, the
-       * experiment has failed cleanly rather
-       * than affecting other tracks.
-       */
     }
   }
 
@@ -743,44 +422,15 @@ export class AudioEngine {
     id: string,
     volume: number,
   ) {
-    const track =
-      this.tracks.get(id);
+    const track = this.tracks.get(id);
 
-    if (!track) {
-      return;
-    }
+    if (!track) return;
 
-    track.volume =
-      Math.min(
-        1,
-        Math.max(0, volume),
-      );
-
-    const effectiveVolume =
-      Math.min(
-        1,
-        Math.max(
-          0,
-          track.volume *
-            this.masterValue,
-        ),
-      );
-
-    if (
-      track.hybrid &&
-      track.foregroundGain
-    ) {
-      track.foregroundGain.gain.value =
-        effectiveVolume;
-
-      track.element.volume =
-        effectiveVolume;
-
-      return;
-    }
-
-    track.element.volume =
-      effectiveVolume;
+    track.volume = Math.min(1, Math.max(0, volume));
+    track.element.volume = Math.min(
+      1,
+      Math.max(0, track.volume * this.masterValue),
+    );
   }
 
   async startMetronome(
@@ -928,43 +578,14 @@ export class AudioEngine {
     track: Track,
   ) {
     if (track.fadeTimer) {
-      window.clearInterval(
-        track.fadeTimer,
-      );
-
-      track.fadeTimer =
-        undefined;
+      window.clearInterval(track.fadeTimer);
+      track.fadeTimer = undefined;
     }
 
     try {
       track.element.pause();
-      track.element.muted = true;
-      track.element.removeAttribute(
-        'src',
-      );
+      track.element.removeAttribute('src');
       track.element.load();
-    } catch {}
-
-    if (
-      track.foregroundElement
-    ) {
-      try {
-        track.foregroundElement.pause();
-
-        track.foregroundElement.removeAttribute(
-          'src',
-        );
-
-        track.foregroundElement.load();
-      } catch {}
-    }
-
-    try {
-      track.foregroundSource?.disconnect();
-    } catch {}
-
-    try {
-      track.foregroundGain?.disconnect();
     } catch {}
   }
 
@@ -981,53 +602,6 @@ export class AudioEngine {
 
     this.tracks.delete(id);
 
-    /*
-     * Hybrid rain has two playback paths,
-     * so dispose both together.
-     */
-    if (track.hybrid) {
-      const gain =
-        track.foregroundGain;
-
-      if (
-        fade > 0 &&
-        gain &&
-        this.context
-      ) {
-        try {
-          const now =
-            this.context.currentTime;
-
-          gain.gain.cancelScheduledValues(
-            now,
-          );
-
-          gain.gain.setValueAtTime(
-            gain.gain.value,
-            now,
-          );
-
-          gain.gain.linearRampToValueAtTime(
-            0,
-            now + fade,
-          );
-
-          window.setTimeout(
-            () => {
-              this.disposeTrack(
-                track,
-              );
-            },
-            fade * 1000 + 30,
-          );
-
-          return;
-        } catch {}
-      }
-
-      this.disposeTrack(track);
-      return;
-    }
 
     if (fade <= 0) {
       this.disposeTrack(track);
