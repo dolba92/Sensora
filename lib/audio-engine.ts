@@ -2,8 +2,9 @@ export type NoiseKind = 'white' | 'pink' | 'brown';
 
 type Track = {
   element: HTMLAudioElement;
+  source: MediaElementAudioSourceNode;
+  gain: GainNode;
   volume: number;
-  fadeTimer?: number;
 };
 
 export class AudioEngine {
@@ -32,7 +33,6 @@ export class AudioEngine {
       }
 
       this.context = new AudioContextClass();
-
       this.master = this.context.createGain();
       this.master.gain.value = this.masterValue;
       this.master.connect(this.context.destination);
@@ -58,11 +58,10 @@ export class AudioEngine {
   setMaster(value: number) {
     this.masterValue = Math.min(1, Math.max(0, value));
 
-    for (const track of this.tracks.values()) {
-      track.element.volume = Math.min(
-        1,
-        Math.max(0, track.volume * this.masterValue),
-      );
+    if (this.context && this.master) {
+      const now = this.context.currentTime;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setTargetAtTime(this.masterValue, now, 0.03);
     }
 
     if (this.metronomeElement) {
@@ -73,84 +72,79 @@ export class AudioEngine {
     }
   }
 
-  private configureBackgroundPlayback(
-    element: HTMLAudioElement,
-  ) {
+  private configurePlayback(element: HTMLAudioElement) {
     element.preload = 'auto';
     element.loop = true;
     element.playsInline = true;
+    element.volume = 1;
 
-    const navigatorWithAudioSession =
-      navigator as Navigator & {
-        audioSession?: {
-          type: string;
-        };
-      };
+    const navigatorWithAudioSession = navigator as Navigator & {
+      audioSession?: { type: string };
+    };
 
     try {
-      if (
-        navigatorWithAudioSession.audioSession
-      ) {
-        navigatorWithAudioSession.audioSession.type =
-          'playback';
+      if (navigatorWithAudioSession.audioSession) {
+        navigatorWithAudioSession.audioSession.type = 'playback';
       }
     } catch {}
   }
 
-  private fadeElementTo(
+  private createTrack(
+    context: AudioContext,
+    element: HTMLAudioElement,
+    volume: number,
+  ) {
+    const source = context.createMediaElementSource(element);
+    const gain = context.createGain();
+
+    gain.gain.value = 0;
+    source.connect(gain);
+    gain.connect(this.master!);
+
+    return {
+      element,
+      source,
+      gain,
+      volume,
+    } satisfies Track;
+  }
+
+  private fadeGainTo(
     track: Track,
     target: number,
     durationSeconds: number,
     onComplete?: () => void,
   ) {
-    if (track.fadeTimer) {
-      window.clearInterval(track.fadeTimer);
-      track.fadeTimer = undefined;
-    }
+    const context = this.context;
 
-    const element = track.element;
-    const startVolume = element.volume;
-    const safeTarget = Math.min(
-      1,
-      Math.max(0, target),
-    );
-
-    if (durationSeconds <= 0) {
-      element.volume = safeTarget;
+    if (!context) {
       onComplete?.();
       return;
     }
 
-    const startedAt = performance.now();
-    const durationMs =
-      durationSeconds * 1000;
+    const safeTarget = Math.min(1, Math.max(0, target));
+    const now = context.currentTime;
 
-    track.fadeTimer =
-      window.setInterval(() => {
-        const progress = Math.min(
-          1,
-          (performance.now() - startedAt) /
-            durationMs,
-        );
+    track.gain.gain.cancelScheduledValues(now);
+    track.gain.gain.setValueAtTime(track.gain.gain.value, now);
 
-        element.volume =
-          startVolume +
-          (safeTarget - startVolume) *
-            progress;
+    if (durationSeconds <= 0) {
+      track.gain.gain.setValueAtTime(safeTarget, now);
+      onComplete?.();
+      return;
+    }
 
-        if (progress >= 1) {
-          if (track.fadeTimer) {
-            window.clearInterval(
-              track.fadeTimer,
-            );
+    track.gain.gain.linearRampToValueAtTime(
+      safeTarget,
+      now + durationSeconds,
+    );
 
-            track.fadeTimer =
-              undefined;
-          }
-
-          onComplete?.();
-        }
-      }, 30);
+    if (onComplete) {
+      window.setTimeout(
+        onComplete,
+        durationSeconds * 1000 + 30,
+      );
+    }
   }
 
   async playFile(
@@ -158,56 +152,36 @@ export class AudioEngine {
     url: string,
     volume: number,
   ) {
-    if (this.tracks.has(id)) {
-      return true;
-    }
+    if (this.tracks.has(id)) return true;
 
+    const safeVolume = Number.isFinite(volume)
+      ? Math.min(1, Math.max(0, volume))
+      : 0.45;
 
-    const safeVolume =
-      Number.isFinite(volume)
-        ? Math.min(
-            1,
-            Math.max(0, volume),
-          )
-        : 0.45;
-
+    const context = await this.ensureAudioContextRunning();
     const element = new Audio(url);
+    this.configurePlayback(element);
 
-    this.configureBackgroundPlayback(
+    const track = this.createTrack(
+      context,
       element,
+      safeVolume,
     );
-
-    element.volume = 0;
-
-    const track: Track = {
-      element,
-      volume: safeVolume,
-    };
 
     this.tracks.set(id, track);
 
     try {
       await element.play();
 
-      if (
-        this.tracks.get(id) !== track
-      ) {
+      if (this.tracks.get(id) !== track) {
         this.disposeTrack(track);
         return false;
       }
 
-      this.fadeElementTo(
-        track,
-        safeVolume *
-          this.masterValue,
-        1.2,
-      );
-
+      this.fadeGainTo(track, safeVolume, 1.2);
       return true;
     } catch (error) {
-      if (
-        this.tracks.get(id) === track
-      ) {
+      if (this.tracks.get(id) === track) {
         this.tracks.delete(id);
       }
 
@@ -221,54 +195,38 @@ export class AudioEngine {
     kind: NoiseKind,
     volume: number,
   ) {
-    if (this.tracks.has(id)) {
-      return true;
-    }
+    if (this.tracks.has(id)) return true;
 
-    const safeVolume =
-      Number.isFinite(volume)
-        ? Math.min(
-            1,
-            Math.max(0, volume),
-          )
-        : 0.45;
+    const safeVolume = Number.isFinite(volume)
+      ? Math.min(1, Math.max(0, volume))
+      : 0.45;
 
-    const noiseUrl =
-      `/audio/${kind}-noise.mp3`;
+    const context = await this.ensureAudioContextRunning();
+    const noiseUrl = `/audio/${kind}-noise.mp3`;
 
-    const element =
-      new Audio(noiseUrl);
+    const element = new Audio(noiseUrl);
+    this.configurePlayback(element);
 
-    this.configureBackgroundPlayback(
+    const track = this.createTrack(
+      context,
       element,
+      safeVolume,
     );
-
-    element.volume =
-      safeVolume *
-      this.masterValue;
-
-    const track: Track = {
-      element,
-      volume: safeVolume,
-    };
 
     this.tracks.set(id, track);
 
     try {
       await element.play();
 
-      if (
-        this.tracks.get(id) !== track
-      ) {
+      if (this.tracks.get(id) !== track) {
         this.disposeTrack(track);
         return false;
       }
 
+      this.fadeGainTo(track, safeVolume, 1.2);
       return true;
     } catch (error) {
-      if (
-        this.tracks.get(id) === track
-      ) {
+      if (this.tracks.get(id) === track) {
         this.tracks.delete(id);
       }
 
@@ -283,139 +241,61 @@ export class AudioEngine {
   ) {
     const bytesPerSample = 2;
     const numberOfChannels = 1;
-
     const dataLength =
-      samples.length *
-      bytesPerSample *
-      numberOfChannels;
-
-    const buffer =
-      new ArrayBuffer(
-        44 + dataLength,
-      );
-
-    const view =
-      new DataView(buffer);
+      samples.length * bytesPerSample * numberOfChannels;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
 
     const writeString = (
       offset: number,
       value: string,
     ) => {
-      for (
-        let i = 0;
-        i < value.length;
-        i++
-      ) {
-        view.setUint8(
-          offset + i,
-          value.charCodeAt(i),
-        );
+      for (let i = 0; i < value.length; i++) {
+        view.setUint8(offset + i, value.charCodeAt(i));
       }
     };
 
     writeString(0, 'RIFF');
-
-    view.setUint32(
-      4,
-      36 + dataLength,
-      true,
-    );
-
+    view.setUint32(4, 36 + dataLength, true);
     writeString(8, 'WAVE');
-
     writeString(12, 'fmt ');
-
-    view.setUint32(
-      16,
-      16,
-      true,
-    );
-
-    view.setUint16(
-      20,
-      1,
-      true,
-    );
-
-    view.setUint16(
-      22,
-      numberOfChannels,
-      true,
-    );
-
-    view.setUint32(
-      24,
-      sampleRate,
-      true,
-    );
-
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
     view.setUint32(
       28,
-      sampleRate *
-        numberOfChannels *
-        bytesPerSample,
+      sampleRate * numberOfChannels * bytesPerSample,
       true,
     );
-
     view.setUint16(
       32,
-      numberOfChannels *
-        bytesPerSample,
+      numberOfChannels * bytesPerSample,
       true,
     );
-
-    view.setUint16(
-      34,
-      16,
-      true,
-    );
-
-    writeString(
-      36,
-      'data',
-    );
-
-    view.setUint32(
-      40,
-      dataLength,
-      true,
-    );
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
 
     let offset = 44;
 
-    for (
-      let i = 0;
-      i < samples.length;
-      i++
-    ) {
+    for (let i = 0; i < samples.length; i++) {
       const sample = Math.max(
         -1,
-        Math.min(
-          1,
-          samples[i],
-        ),
+        Math.min(1, samples[i]),
       );
-
       const pcm =
         sample < 0
           ? sample * 0x8000
           : sample * 0x7fff;
 
-      view.setInt16(
-        offset,
-        pcm,
-        true,
-      );
-
+      view.setInt16(offset, pcm, true);
       offset += 2;
     }
 
-    return new Blob(
-      [buffer],
-      {
-        type: 'audio/wav',
-      },
-    );
+    return new Blob([buffer], {
+      type: 'audio/wav',
+    });
   }
 
   setVolume(
@@ -426,10 +306,23 @@ export class AudioEngine {
 
     if (!track) return;
 
-    track.volume = Math.min(1, Math.max(0, volume));
-    track.element.volume = Math.min(
+    track.volume = Math.min(
       1,
-      Math.max(0, track.volume * this.masterValue),
+      Math.max(0, volume),
+    );
+
+    if (!this.context) {
+      track.gain.gain.value = track.volume;
+      return;
+    }
+
+    const now = this.context.currentTime;
+
+    track.gain.gain.cancelScheduledValues(now);
+    track.gain.gain.setTargetAtTime(
+      track.volume,
+      now,
+      0.02,
     );
   }
 
@@ -442,35 +335,26 @@ export class AudioEngine {
     }
 
     if (!this.metronomeElement) {
-      const element =
-        new Audio(
-          this.metronomeUrl,
-        );
+      const element = new Audio(
+        this.metronomeUrl,
+      );
 
       element.preload = 'auto';
       element.loop = true;
       element.playsInline = true;
-
-      this.metronomeElement =
-        element;
+      this.metronomeElement = element;
     }
 
-    const element =
-      this.metronomeElement;
+    const element = this.metronomeElement;
 
     this.setMetronomeBpm(bpm);
 
     element.volume = Math.min(
       1,
-      Math.max(
-        0,
-        this.masterValue * 0.55,
-      ),
+      Math.max(0, this.masterValue * 0.55),
     );
 
-    if (!element.paused) {
-      return;
-    }
+    if (!element.paused) return;
 
     try {
       element.currentTime = 0;
@@ -482,27 +366,21 @@ export class AudioEngine {
   setMetronomeBpm(
     bpm: number,
   ) {
-    const safeBpm =
-      Math.min(
-        240,
-        Math.max(20, bpm),
-      );
+    const safeBpm = Math.min(
+      240,
+      Math.max(20, bpm),
+    );
 
-    if (
-      this.metronomeElement
-    ) {
+    if (this.metronomeElement) {
       this.metronomeElement.playbackRate =
         safeBpm / 60;
     }
   }
 
   stopMetronome() {
-    const element =
-      this.metronomeElement;
+    const element = this.metronomeElement;
 
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
     try {
       element.pause();
@@ -513,48 +391,21 @@ export class AudioEngine {
   private createMetronomeLoopUrl() {
     const sampleRate = 44100;
     const durationSeconds = 1;
+    const length = Math.floor(
+      sampleRate * durationSeconds,
+    );
+    const clickLength = Math.floor(
+      sampleRate * 0.09,
+    );
+    const samples = new Float32Array(length);
 
-    const length =
-      Math.floor(
-        sampleRate *
-          durationSeconds,
-      );
-
-    const clickLength =
-      Math.floor(
-        sampleRate * 0.09,
-      );
-
-    const samples =
-      new Float32Array(length);
-
-    for (
-      let i = 0;
-      i < clickLength;
-      i++
-    ) {
-      const time =
-        i / sampleRate;
-
-      const envelope =
-        Math.exp(
-          -time * 45,
-        );
-
+    for (let i = 0; i < clickLength; i++) {
+      const time = i / sampleRate;
+      const envelope = Math.exp(-time * 45);
       const tone =
-        Math.sin(
-          2 *
-            Math.PI *
-            850 *
-            time,
-        ) *
+        Math.sin(2 * Math.PI * 850 * time) *
           0.75 +
-        Math.sin(
-          2 *
-            Math.PI *
-            1250 *
-            time,
-        ) *
+        Math.sin(2 * Math.PI * 1250 * time) *
           0.25;
 
       samples[i] =
@@ -563,29 +414,29 @@ export class AudioEngine {
         0.65;
     }
 
-    const blob =
-      this.createNoiseWav(
-        samples,
-        sampleRate,
-      );
-
-    return URL.createObjectURL(
-      blob,
+    const blob = this.createNoiseWav(
+      samples,
+      sampleRate,
     );
+
+    return URL.createObjectURL(blob);
   }
 
   private disposeTrack(
     track: Track,
   ) {
-    if (track.fadeTimer) {
-      window.clearInterval(track.fadeTimer);
-      track.fadeTimer = undefined;
-    }
-
     try {
       track.element.pause();
       track.element.removeAttribute('src');
       track.element.load();
+    } catch {}
+
+    try {
+      track.source.disconnect();
+    } catch {}
+
+    try {
+      track.gain.disconnect();
     } catch {}
   }
 
@@ -593,22 +444,18 @@ export class AudioEngine {
     id: string,
     fade = 0.12,
   ) {
-    const track =
-      this.tracks.get(id);
+    const track = this.tracks.get(id);
 
-    if (!track) {
-      return;
-    }
+    if (!track) return;
 
     this.tracks.delete(id);
-
 
     if (fade <= 0) {
       this.disposeTrack(track);
       return;
     }
 
-    this.fadeElementTo(
+    this.fadeGainTo(
       track,
       0,
       fade,
@@ -619,11 +466,8 @@ export class AudioEngine {
   }
 
   stopAll(fade = 0) {
-    [
-      ...this.tracks.keys(),
-    ].forEach(
-      (id) =>
-        this.stop(id, fade),
+    [...this.tracks.keys()].forEach(
+      (id) => this.stop(id, fade),
     );
   }
 }
