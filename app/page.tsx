@@ -428,18 +428,29 @@ export default function Home() {
     setActive((v) => v.map((a) => (a.id === id ? { ...a, volume: value } : a)));
   };
   const runMix = (mix: Mix) => {
-    stopAll(0.18);
-    setPendingMixId(mix.id);
-    pendingMixRef.current = window.setTimeout(() => {
+    if (pendingMixRef.current) {
+      clearTimeout(pendingMixRef.current);
       pendingMixRef.current = undefined;
+    }
+
+    /*
+     * Start the mix directly from the user's click.
+     * Do not delay with setTimeout: on mobile browsers that delay can
+     * lose the original user gesture and make media playback wait.
+     */
+    stopAll(0);
+    setPendingMixId(mix.id);
+
+    void Promise.all(
+      mix.tracks.map((track) => {
+        const sound = allSounds.find((item) => item.id === track.id);
+        return sound
+          ? start(sound, track.volume)
+          : Promise.resolve();
+      }),
+    ).finally(() => {
       setPendingMixId(null);
-      void Promise.all(
-        mix.tracks.map((t) => {
-          const s = allSounds.find((x) => x.id === t.id);
-          return s ? start(s, t.volume) : Promise.resolve();
-        }),
-      );
-    }, 220);
+    });
   };
   const stopMix = (mix: Mix) => {
     if (pendingMixId === mix.id) {
