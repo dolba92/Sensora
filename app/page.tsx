@@ -155,6 +155,20 @@ const SOUNDS: Sound[] = [
     icon: '〰',
   },
   {
+    id: 'storm-wind',
+    name: 'Штормовой ветер',
+    category: 'Природа',
+    file: '/audio/storm-wind.mp3',
+    icon: '≋',
+  },
+  {
+    id: 'cat-purring',
+    name: 'Мурчание кота',
+    category: 'Спокойные',
+    file: '/audio/cat-purring.mp3',
+    icon: '♡',
+  },
+  {
     id: 'birds',
     name: 'Птицы',
     category: 'Природа',
