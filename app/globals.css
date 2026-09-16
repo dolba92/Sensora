@@ -121,8 +121,8 @@ body {
 }
 
 /*
- * Пока сохраняем существующий мрамор,
- * но вписываем его в новую лавандово-золотую палитру.
+ * Фон приложения.
+ * Использует /public/assets/background.png
  */
 body::before {
   content: "";
@@ -203,9 +203,7 @@ button {
 
 
 /*
- * Верхняя панель.
- * :has() выбирает именно glass, содержащий логотип,
- * поэтому page.tsx менять не требуется.
+ * Верхняя панель с логотипом.
  */
 .glass:has(.brand-logo) {
   background:
@@ -229,11 +227,18 @@ button {
    ЛОГОТИП
    ========================================================= */
 
+/*
+ * Тёмно-сливовая тонкая окантовка делает золотые буквы
+ * заметнее на светло-сиреневой шапке.
+ */
 .brand-logo {
   filter:
-    drop-shadow(0 1px 1px rgba(92, 54, 16, .30))
-    drop-shadow(0 3px 9px rgba(151, 102, 31, .18))
-    drop-shadow(0 0 8px rgba(255, 232, 181, .16));
+    drop-shadow(0 1px 0 rgba(73, 50, 77, .78))
+    drop-shadow(1px 0 0 rgba(73, 50, 77, .42))
+    drop-shadow(-1px 0 0 rgba(73, 50, 77, .42))
+    drop-shadow(0 -1px 0 rgba(73, 50, 77, .32))
+    drop-shadow(0 3px 7px rgba(73, 50, 77, .22))
+    drop-shadow(0 0 5px rgba(201, 164, 103, .18));
 }
 
 
@@ -338,6 +343,16 @@ button {
   border-color: rgba(211, 183, 124, .42);
 }
 
+.dark .brand-logo {
+  filter:
+    drop-shadow(0 1px 0 rgba(30, 21, 34, .90))
+    drop-shadow(1px 0 0 rgba(30, 21, 34, .55))
+    drop-shadow(-1px 0 0 rgba(30, 21, 34, .55))
+    drop-shadow(0 -1px 0 rgba(30, 21, 34, .45))
+    drop-shadow(0 3px 8px rgba(15, 10, 18, .32))
+    drop-shadow(0 0 6px rgba(211, 183, 124, .22));
+}
+
 .dark .sound-library-panel {
   background: rgba(67, 57, 79, .94);
   border-color: rgba(211, 183, 124, .26);
@@ -394,6 +409,7 @@ button {
   height: 1.15rem;
   border-width: 3px;
   border-color: var(--primary);
+
   box-shadow:
     0 2px 8px rgba(64, 56, 76, .20),
     0 0 0 1px rgba(201, 164, 103, .15);
