@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -21,38 +22,429 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --radius-sm: calc(var(--radius) * .6);
   --radius-md: calc(var(--radius) * .8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
 }
 
-:root { --background:#f1eef5; --foreground:#40384c; --card:rgba(238,234,247,.95); --card-foreground:#40384c; --popover:#f3f0f8; --popover-foreground:#40384c; --primary:#75658f; --primary-foreground:#fff; --secondary:#eeeaf7; --secondary-foreground:#40384c; --muted:#eeeaf7; --muted-foreground:#6f667a; --accent:#d5cbea; --accent-foreground:#40384c; --destructive:#9b465a; --border:#c3b6dd; --input:#cbbfe0; --ring:#75658f; --radius:1rem; }
-.dark { --background:#2f2a36; --foreground:#f4f0f8; --card:rgba(57,49,68,.9); --card-foreground:#f4f0f8; --popover:#443a50; --popover-foreground:#f4f0f8; --primary:#c5b7dd; --primary-foreground:#2d2635; --secondary:#4a4056; --secondary-foreground:#f4f0f8; --muted:#403849; --muted-foreground:#c9c0d1; --accent:#5a4b69; --accent-foreground:#f7f3fa; --destructive:#e8879c; --border:rgba(226,216,239,.22); --input:rgba(226,216,239,.3); --ring:#c5b7dd; }
-* { box-sizing:border-box; border-color:var(--border); }
-html { scroll-behavior:smooth; background:var(--background); }
-body { min-height:100vh; margin:0; overflow-x:hidden; position:relative; isolation:isolate; color:var(--foreground); background:transparent; font-family:"Segoe UI Variable","Segoe UI",system-ui,sans-serif; font-size:16px; }
-body::before { content:""; position:fixed; inset:0; z-index:-2; background:url('/assets/background.png') center/cover no-repeat; }
-body::after { content:""; position:fixed; inset:0; z-index:-1; background:rgba(255,253,255,.1); backdrop-filter:saturate(.88); }
-.dark body::before { filter:brightness(.46) saturate(.5); }
-.dark body::after { background:rgba(35,29,42,.5); }
-button,input,select { font:inherit; } button { touch-action:manipulation; }
-:focus-visible { outline:3px solid var(--ring); outline-offset:3px; }
-.glass { background:var(--card); border:1px solid var(--border); box-shadow:0 14px 42px rgba(64,56,76,.1); backdrop-filter:blur(10px); }
-.sound-library-panel { background:rgba(238,234,247,.97); border-color:#c3b6dd; box-shadow:0 16px 42px rgba(75,62,91,.11),0 3px 10px rgba(75,62,91,.06); }
-.sound-card { background:#e2ddf1; border-color:#c3b6dd; box-shadow:0 12px 32px rgba(75,62,91,.12),0 2px 8px rgba(75,62,91,.07); }
-.sound-card--playing { background:#d5cbea; border-color:#75658f; box-shadow:0 13px 34px rgba(75,62,91,.15),0 0 0 1px rgba(117,101,143,.1); }
-@media (hover:hover) { .sound-card:not(.sound-card--playing):hover { background:#ddd6ed; border-color:#aa9ac8; transform:translateY(-1px); } }
-.dark .sound-library-panel { background:rgba(67,57,79,.94); border-color:rgba(226,216,239,.24); }
-.dark .sound-card { background:rgba(75,64,88,.97); border-color:rgba(226,216,239,.22); box-shadow:0 15px 38px rgba(18,13,23,.25); }
-.dark .sound-card--playing { background:#5a4b69; border-color:#c5b7dd; }
-.brand-logo { filter:drop-shadow(0 1px 1px rgba(115,77,22,.22)) drop-shadow(0 3px 9px rgba(151,102,31,.12)); }
-.mix-slider { min-width:0; flex:1 1 auto; }
-.mix-slider [data-slot="slider-track"] { height:.5rem; background:rgba(117,101,143,.22); box-shadow:inset 0 0 0 1px rgba(104,87,127,.13); }
-.mix-slider [data-slot="slider-range"] { background:var(--primary); }
-.mix-slider [data-slot="slider-thumb"] { width:1.15rem; height:1.15rem; border-width:3px; border-color:var(--primary); box-shadow:0 2px 8px rgba(64,56,76,.2); }
-.dark .mix-slider [data-slot="slider-track"] { background:rgba(226,216,239,.2); }
-.quiet-scroll { scrollbar-width:thin; scrollbar-color:rgba(117,101,143,.35) transparent; }
-@media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
-.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
-@media (max-width:700px) { body::before { background-position:54% center; } }
+:root {
+  --background: #eee9f2;
+  --foreground: #40384c;
+
+  --card: rgba(232, 224, 241, .94);
+  --card-foreground: #40384c;
+
+  --popover: #f1ebf5;
+  --popover-foreground: #40384c;
+
+  --primary: #75658f;
+  --primary-foreground: #fff;
+
+  --secondary: #e9e1f1;
+  --secondary-foreground: #40384c;
+
+  --muted: #ebe4f2;
+  --muted-foreground: #6f667a;
+
+  --accent: #d5cbea;
+  --accent-foreground: #40384c;
+
+  --destructive: #9b465a;
+
+  --border: #c5b5d8;
+  --input: #cbbfe0;
+  --ring: #75658f;
+
+  /* Шампанское золото */
+  --gold: #c9a467;
+  --gold-soft: rgba(201, 164, 103, .48);
+  --gold-faint: rgba(201, 164, 103, .20);
+
+  --radius: 1rem;
+}
+
+.dark {
+  --background: #2f2a36;
+  --foreground: #f4f0f8;
+
+  --card: rgba(57, 49, 68, .9);
+  --card-foreground: #f4f0f8;
+
+  --popover: #443a50;
+  --popover-foreground: #f4f0f8;
+
+  --primary: #c5b7dd;
+  --primary-foreground: #2d2635;
+
+  --secondary: #4a4056;
+  --secondary-foreground: #f4f0f8;
+
+  --muted: #403849;
+  --muted-foreground: #c9c0d1;
+
+  --accent: #5a4b69;
+  --accent-foreground: #f7f3fa;
+
+  --destructive: #e8879c;
+
+  --border: rgba(226, 216, 239, .22);
+  --input: rgba(226, 216, 239, .3);
+  --ring: #c5b7dd;
+
+  --gold: #d3b77c;
+  --gold-soft: rgba(211, 183, 124, .34);
+  --gold-faint: rgba(211, 183, 124, .15);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  position: relative;
+  isolation: isolate;
+  color: var(--foreground);
+  background: transparent;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+}
+
+/*
+ * Пока сохраняем существующий мрамор,
+ * но вписываем его в новую лавандово-золотую палитру.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(236, 226, 241, .30),
+      rgba(208, 190, 219, .16) 42%,
+      rgba(236, 215, 221, .18) 72%,
+      rgba(219, 204, 232, .24)
+    ),
+    url('/assets/background.png') center / cover no-repeat;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+
+  background:
+    radial-gradient(
+      circle at 18% 10%,
+      rgba(255, 246, 225, .20),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 82% 28%,
+      rgba(199, 173, 216, .13),
+      transparent 34%
+    );
+
+  backdrop-filter: saturate(.88);
+}
+
+.dark body::before {
+  filter: brightness(.46) saturate(.5);
+}
+
+.dark body::after {
+  background: rgba(35, 29, 42, .5);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+
+/* =========================================================
+   ОСНОВНЫЕ СТЕКЛЯННЫЕ ПАНЕЛИ
+   ========================================================= */
+
+.glass {
+  background: rgba(237, 231, 245, .94);
+  border: 1px solid rgba(177, 158, 202, .72);
+
+  box-shadow:
+    0 14px 42px rgba(64, 56, 76, .10),
+    0 1px 0 rgba(255, 255, 255, .55) inset;
+
+  backdrop-filter: blur(10px);
+}
+
+
+/*
+ * Верхняя панель.
+ * :has() выбирает именно glass, содержащий логотип,
+ * поэтому page.tsx менять не требуется.
+ */
+.glass:has(.brand-logo) {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(224, 213, 237, .97),
+      rgba(210, 194, 226, .96) 55%,
+      rgba(224, 207, 222, .95)
+    );
+
+  border-color: var(--gold-soft);
+
+  box-shadow:
+    0 15px 42px rgba(74, 57, 91, .13),
+    0 0 0 1px var(--gold-faint),
+    inset 0 1px 0 rgba(255, 255, 255, .58);
+}
+
+
+/* =========================================================
+   ЛОГОТИП
+   ========================================================= */
+
+.brand-logo {
+  filter:
+    drop-shadow(0 1px 1px rgba(92, 54, 16, .30))
+    drop-shadow(0 3px 9px rgba(151, 102, 31, .18))
+    drop-shadow(0 0 8px rgba(255, 232, 181, .16));
+}
+
+
+/* =========================================================
+   ПАНЕЛЬ БИБЛИОТЕКИ
+   ========================================================= */
+
+.sound-library-panel {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(239, 232, 246, .97),
+      rgba(230, 220, 240, .96)
+    );
+
+  border-color: rgba(190, 163, 116, .46);
+
+  box-shadow:
+    0 16px 42px rgba(75, 62, 91, .11),
+    0 3px 10px rgba(75, 62, 91, .06),
+    0 0 0 1px rgba(218, 190, 137, .09);
+}
+
+
+/* =========================================================
+   КАРТОЧКИ ЗВУКОВ
+   ========================================================= */
+
+.sound-card {
+  background:
+    linear-gradient(
+      145deg,
+      #e4ddf0,
+      #ddd3e9
+    );
+
+  border: 1px solid rgba(190, 155, 96, .52);
+
+  box-shadow:
+    0 12px 32px rgba(75, 62, 91, .12),
+    0 2px 8px rgba(75, 62, 91, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .48);
+}
+
+
+/* Включённый звук */
+.sound-card--playing {
+  background:
+    linear-gradient(
+      145deg,
+      #d8cbea,
+      #cdbdde
+    );
+
+  border-color: rgba(181, 139, 70, .78);
+
+  box-shadow:
+    0 13px 34px rgba(75, 62, 91, .16),
+    0 0 0 1px rgba(205, 168, 103, .22),
+    0 0 20px rgba(205, 168, 103, .08),
+    inset 0 1px 0 rgba(255, 255, 255, .42);
+}
+
+
+@media (hover: hover) {
+  .sound-card:not(.sound-card--playing):hover {
+    background:
+      linear-gradient(
+        145deg,
+        #e1d8ed,
+        #d8cce7
+      );
+
+    border-color: rgba(181, 139, 70, .70);
+
+    box-shadow:
+      0 14px 34px rgba(75, 62, 91, .14),
+      0 0 0 1px rgba(205, 168, 103, .12);
+
+    transform: translateY(-1px);
+  }
+}
+
+
+/* =========================================================
+   ТЁМНАЯ ТЕМА
+   ========================================================= */
+
+.dark .glass {
+  background: rgba(57, 49, 68, .92);
+  border-color: rgba(211, 183, 124, .23);
+}
+
+.dark .glass:has(.brand-logo) {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(74, 61, 87, .97),
+      rgba(84, 66, 92, .96)
+    );
+
+  border-color: rgba(211, 183, 124, .42);
+}
+
+.dark .sound-library-panel {
+  background: rgba(67, 57, 79, .94);
+  border-color: rgba(211, 183, 124, .26);
+}
+
+.dark .sound-card {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(75, 64, 88, .98),
+      rgba(68, 57, 81, .98)
+    );
+
+  border-color: rgba(211, 183, 124, .27);
+
+  box-shadow:
+    0 15px 38px rgba(18, 13, 23, .25),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+.dark .sound-card--playing {
+  background:
+    linear-gradient(
+      145deg,
+      #655474,
+      #594866
+    );
+
+  border-color: rgba(220, 190, 128, .58);
+}
+
+
+/* =========================================================
+   СЛАЙДЕРЫ МИКСОВ
+   ========================================================= */
+
+.mix-slider {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mix-slider [data-slot="slider-track"] {
+  height: .5rem;
+  background: rgba(117, 101, 143, .22);
+  box-shadow: inset 0 0 0 1px rgba(104, 87, 127, .13);
+}
+
+.mix-slider [data-slot="slider-range"] {
+  background: var(--primary);
+}
+
+.mix-slider [data-slot="slider-thumb"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-width: 3px;
+  border-color: var(--primary);
+  box-shadow:
+    0 2px 8px rgba(64, 56, 76, .20),
+    0 0 0 1px rgba(201, 164, 103, .15);
+}
+
+.dark .mix-slider [data-slot="slider-track"] {
+  background: rgba(226, 216, 239, .20);
+}
+
+
+/* =========================================================
+   ПРОКРУТКА
+   ========================================================= */
+
+.quiet-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(117, 101, 143, .35) transparent;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+  body::before {
+    background-position: 54% center;
+  }
+}
