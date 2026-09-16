@@ -1,4 +1,4 @@
-const CACHE = 'sensora-v14';
+const CACHE = 'sensora-v15';
 
 const CORE = [
   '/manifest.webmanifest',
@@ -13,16 +13,7 @@ self.addEventListener('install', event => {
     const cache = await caches.open(CACHE);
 
     try {
-      const response = await fetch('/');
-      const html = await response.clone().text();
-
-      await cache.put('/', response);
-
-      const bundles = [
-        ...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g),
-      ].map(match => match[1]);
-
-      await cache.addAll([...CORE, ...bundles]);
+      await cache.addAll(CORE);
     } catch {
       // Установка приложения не должна ломаться,
       // если какой-то ресурс временно недоступен.
@@ -65,6 +56,48 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  /*
+   * Для переходов между страницами используем network-first.
+   *
+   * Благодаря этому установленная PWA сначала получает
+   * актуальную версию приложения с сервера.
+   * Если интернета нет — используется сохранённая версия.
+   */
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (
+            response.ok &&
+            url.origin === self.location.origin
+          ) {
+            const copy = response.clone();
+
+            void caches.open(CACHE).then(cache =>
+              cache.put(event.request, copy),
+            );
+          }
+
+          return response;
+        })
+        .catch(async () => {
+          const cached =
+            (await caches.match(event.request)) ||
+            (await caches.match('/'));
+
+          if (cached) return cached;
+
+          throw new Error('Страница недоступна офлайн.');
+        }),
+    );
+
+    return;
+  }
+
+  /*
+   * Остальные статические ресурсы:
+   * сначала кэш, затем сеть.
+   */
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -83,8 +116,7 @@ self.addEventListener('fetch', event => {
           }
 
           return response;
-        })
-        .catch(() => caches.match('/'));
+        });
     }),
   );
 });
