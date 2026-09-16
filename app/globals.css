@@ -30,39 +30,35 @@
 }
 
 :root {
-  --background: #f5f0ed;
+  --background: #f5f1f6;
   --foreground: #40384c;
 
-  /* Тёплые жемчужные поверхности */
-  --card: rgba(248, 243, 239, .95);
+  --card: rgba(255, 255, 255, .48);
   --card-foreground: #40384c;
 
-  --popover: #faf6f2;
+  --popover: rgba(250, 247, 252, .88);
   --popover-foreground: #40384c;
 
-  /* Сиреневый оставляем акцентом */
   --primary: #75658f;
-  --primary-foreground: #fff;
+  --primary-foreground: #ffffff;
 
-  --secondary: #f2ebe8;
+  --secondary: rgba(247, 242, 249, .54);
   --secondary-foreground: #40384c;
 
-  --muted: #f3edeb;
-  --muted-foreground: #756b78;
+  --muted: rgba(246, 241, 248, .55);
+  --muted-foreground: #6f6678;
 
-  /* Активное состояние — пудровая лаванда */
-  --accent: #ded3e5;
+  --accent: rgba(218, 207, 232, .78);
   --accent-foreground: #40384c;
 
   --destructive: #9b465a;
 
-  --border: #d5c3b5;
-  --input: #d7c9ce;
+  --border: rgba(183, 157, 190, .55);
+  --input: rgba(190, 175, 202, .58);
   --ring: #75658f;
 
-  /* Шампанское золото */
   --gold: #c9a467;
-  --gold-soft: rgba(201, 164, 103, .50);
+  --gold-soft: rgba(190, 148, 79, .52);
   --gold-faint: rgba(201, 164, 103, .18);
 
   --radius: 1rem;
@@ -72,22 +68,22 @@
   --background: #2f2a36;
   --foreground: #f4f0f8;
 
-  --card: rgba(57, 49, 68, .9);
+  --card: rgba(54, 47, 64, .64);
   --card-foreground: #f4f0f8;
 
-  --popover: #443a50;
+  --popover: rgba(68, 58, 80, .92);
   --popover-foreground: #f4f0f8;
 
   --primary: #c5b7dd;
   --primary-foreground: #2d2635;
 
-  --secondary: #4a4056;
+  --secondary: rgba(74, 64, 86, .68);
   --secondary-foreground: #f4f0f8;
 
-  --muted: #403849;
+  --muted: rgba(64, 56, 73, .72);
   --muted-foreground: #c9c0d1;
 
-  --accent: #5a4b69;
+  --accent: rgba(90, 75, 105, .85);
   --accent-foreground: #f7f3fa;
 
   --destructive: #e8879c;
@@ -97,7 +93,7 @@
   --ring: #c5b7dd;
 
   --gold: #d3b77c;
-  --gold-soft: rgba(211, 183, 124, .34);
+  --gold-soft: rgba(211, 183, 124, .38);
   --gold-faint: rgba(211, 183, 124, .15);
 }
 
@@ -117,9 +113,17 @@ body {
   overflow-x: hidden;
   position: relative;
   isolation: isolate;
+
   color: var(--foreground);
+
   background: transparent;
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+
+  font-family:
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+
   font-size: 16px;
 }
 
@@ -135,13 +139,8 @@ body::before {
   z-index: -2;
 
   background:
-    linear-gradient(
-      135deg,
-      rgba(255, 250, 245, .10),
-      rgba(238, 222, 224, .08) 45%,
-      rgba(232, 221, 239, .08)
-    ),
-    url('/assets/background.png') center / cover no-repeat;
+    url('/assets/background.png')
+    center / cover no-repeat;
 }
 
 body::after {
@@ -150,29 +149,27 @@ body::after {
   inset: 0;
   z-index: -1;
 
-  background:
-    radial-gradient(
-      circle at 20% 12%,
-      rgba(255, 249, 235, .13),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 82% 28%,
-      rgba(215, 191, 208, .06),
-      transparent 35%
-    );
-
-  backdrop-filter: saturate(.92);
+  /*
+   * Совсем лёгкая вуаль.
+   * Сам фон остаётся хорошо виден.
+   */
+  background: rgba(255, 250, 255, .04);
 }
 
 .dark body::before {
-  filter: brightness(.46) saturate(.5);
+  filter:
+    brightness(.46)
+    saturate(.55);
 }
 
 .dark body::after {
-  background: rgba(35, 29, 42, .5);
+  background: rgba(35, 29, 42, .36);
 }
 
+
+/* =========================================================
+   ОБЩЕЕ
+   ========================================================= */
 
 button,
 input,
@@ -191,24 +188,30 @@ button {
 
 
 /* =========================================================
-   ОСНОВНЫЕ ПАНЕЛИ
+   МАТОВОЕ СТЕКЛО
    ========================================================= */
 
 .glass {
   background:
     linear-gradient(
-      145deg,
-      rgba(250, 246, 242, .95),
-      rgba(245, 238, 237, .94)
+      135deg,
+      rgba(255, 255, 255, .55),
+      rgba(247, 240, 250, .42)
     );
 
-  border: 1px solid rgba(199, 170, 122, .42);
+  border: 1px solid rgba(190, 157, 105, .42);
 
   box-shadow:
-    0 14px 42px rgba(64, 56, 76, .09),
-    0 1px 0 rgba(255, 255, 255, .68) inset;
+    0 12px 36px rgba(64, 56, 76, .10),
+    inset 0 1px 0 rgba(255, 255, 255, .72);
 
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter:
+    blur(18px)
+    saturate(1.05);
+
+  backdrop-filter:
+    blur(18px)
+    saturate(1.05);
 }
 
 
@@ -220,17 +223,24 @@ button {
   background:
     linear-gradient(
       135deg,
-      rgba(248, 240, 235, .97),
-      rgba(239, 226, 226, .96) 52%,
-      rgba(236, 225, 235, .95)
+      rgba(255, 255, 255, .56),
+      rgba(239, 227, 245, .42)
     );
 
-  border-color: rgba(190, 151, 87, .55);
+  border-color: rgba(184, 140, 70, .52);
 
   box-shadow:
-    0 15px 42px rgba(74, 57, 91, .12),
-    0 0 0 1px rgba(201, 164, 103, .10),
-    inset 0 1px 0 rgba(255, 255, 255, .68);
+    0 14px 38px rgba(64, 56, 76, .11),
+    0 0 0 1px rgba(201, 164, 103, .08),
+    inset 0 1px 0 rgba(255, 255, 255, .78);
+
+  -webkit-backdrop-filter:
+    blur(20px)
+    saturate(1.05);
+
+  backdrop-filter:
+    blur(20px)
+    saturate(1.05);
 }
 
 
@@ -240,33 +250,40 @@ button {
 
 .brand-logo {
   filter:
-    drop-shadow(0 1px 0 rgba(73, 50, 77, .78))
-    drop-shadow(1px 0 0 rgba(73, 50, 77, .42))
-    drop-shadow(-1px 0 0 rgba(73, 50, 77, .42))
-    drop-shadow(0 -1px 0 rgba(73, 50, 77, .32))
-    drop-shadow(0 3px 7px rgba(73, 50, 77, .22))
+    drop-shadow(0 1px 0 rgba(73, 50, 77, .82))
+    drop-shadow(1px 0 0 rgba(73, 50, 77, .46))
+    drop-shadow(-1px 0 0 rgba(73, 50, 77, .46))
+    drop-shadow(0 -1px 0 rgba(73, 50, 77, .35))
+    drop-shadow(0 3px 7px rgba(73, 50, 77, .24))
     drop-shadow(0 0 5px rgba(201, 164, 103, .18));
 }
 
 
 /* =========================================================
-   ПАНЕЛЬ БИБЛИОТЕКИ
+   БИБЛИОТЕКА
    ========================================================= */
 
 .sound-library-panel {
   background:
     linear-gradient(
-      145deg,
-      rgba(250, 246, 243, .97),
-      rgba(245, 237, 237, .96)
+      135deg,
+      rgba(255, 255, 255, .57),
+      rgba(245, 238, 248, .43)
     );
 
-  border-color: rgba(190, 153, 93, .45);
+  border-color: rgba(187, 146, 78, .45);
 
   box-shadow:
-    0 16px 42px rgba(75, 62, 91, .10),
-    0 3px 10px rgba(75, 62, 91, .05),
-    0 0 0 1px rgba(218, 190, 137, .08);
+    0 14px 38px rgba(75, 62, 91, .10),
+    inset 0 1px 0 rgba(255, 255, 255, .72);
+
+  -webkit-backdrop-filter:
+    blur(20px)
+    saturate(1.03);
+
+  backdrop-filter:
+    blur(20px)
+    saturate(1.03);
 }
 
 
@@ -278,51 +295,76 @@ button {
   background:
     linear-gradient(
       145deg,
-      rgba(248, 243, 240, .97),
-      rgba(241, 232, 233, .97)
+      rgba(255, 255, 255, .56),
+      rgba(242, 235, 247, .43)
     );
 
-  border: 1px solid rgba(190, 151, 88, .54);
+  border: 1px solid rgba(185, 141, 70, .52);
 
   box-shadow:
-    0 12px 32px rgba(75, 62, 91, .10),
-    0 2px 8px rgba(75, 62, 91, .05),
-    inset 0 1px 0 rgba(255, 255, 255, .70);
+    0 10px 28px rgba(75, 62, 91, .10),
+    inset 0 1px 0 rgba(255, 255, 255, .74);
+
+  -webkit-backdrop-filter:
+    blur(18px)
+    saturate(1.03);
+
+  backdrop-filter:
+    blur(18px)
+    saturate(1.03);
 }
 
 
-/* Включённая карточка сохраняет сиреневый акцент */
+/* =========================================================
+   ВКЛЮЧЁННЫЙ ЗВУК
+   ========================================================= */
+
 .sound-card--playing {
+  /*
+   * Чуть больше лаванды только для активного звука.
+   */
   background:
     linear-gradient(
       145deg,
-      #e4d9e9,
-      #d8c9e1
+      rgba(223, 211, 235, .70),
+      rgba(205, 189, 222, .62)
     );
 
-  border-color: rgba(175, 132, 62, .78);
+  border-color: rgba(169, 124, 52, .78);
 
   box-shadow:
-    0 13px 34px rgba(75, 62, 91, .15),
-    0 0 0 1px rgba(205, 168, 103, .20),
-    0 0 20px rgba(205, 168, 103, .07),
-    inset 0 1px 0 rgba(255, 255, 255, .52);
+    0 12px 32px rgba(75, 62, 91, .15),
+    0 0 0 1px rgba(205, 168, 103, .18),
+    0 0 18px rgba(205, 168, 103, .06),
+    inset 0 1px 0 rgba(255, 255, 255, .62);
+
+  -webkit-backdrop-filter:
+    blur(20px)
+    saturate(1.05);
+
+  backdrop-filter:
+    blur(20px)
+    saturate(1.05);
 }
 
+
+/* =========================================================
+   HOVER
+   ========================================================= */
 
 @media (hover: hover) {
   .sound-card:not(.sound-card--playing):hover {
     background:
       linear-gradient(
         145deg,
-        #f5eeec,
-        #ecdfdf
+        rgba(255, 255, 255, .66),
+        rgba(239, 230, 245, .52)
       );
 
-    border-color: rgba(181, 139, 70, .72);
+    border-color: rgba(174, 127, 53, .72);
 
     box-shadow:
-      0 14px 34px rgba(75, 62, 91, .12),
+      0 13px 32px rgba(75, 62, 91, .13),
       0 0 0 1px rgba(205, 168, 103, .10);
 
     transform: translateY(-1px);
@@ -335,16 +377,25 @@ button {
    ========================================================= */
 
 .dark .glass {
-  background: rgba(57, 49, 68, .92);
-  border-color: rgba(211, 183, 124, .23);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(58, 50, 68, .68),
+      rgba(45, 38, 54, .58)
+    );
+
+  border-color: rgba(211, 183, 124, .25);
+
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
 .dark .glass:has(.brand-logo) {
   background:
     linear-gradient(
       135deg,
-      rgba(74, 61, 87, .97),
-      rgba(84, 66, 92, .96)
+      rgba(70, 59, 81, .70),
+      rgba(56, 46, 66, .60)
     );
 
   border-color: rgba(211, 183, 124, .42);
@@ -361,39 +412,47 @@ button {
 }
 
 .dark .sound-library-panel {
-  background: rgba(67, 57, 79, .94);
-  border-color: rgba(211, 183, 124, .26);
+  background:
+    rgba(59, 50, 70, .66);
+
+  border-color:
+    rgba(211, 183, 124, .27);
+
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
 .dark .sound-card {
   background:
     linear-gradient(
       145deg,
-      rgba(75, 64, 88, .98),
-      rgba(68, 57, 81, .98)
+      rgba(71, 60, 84, .70),
+      rgba(55, 47, 66, .62)
     );
 
-  border-color: rgba(211, 183, 124, .27);
+  border-color:
+    rgba(211, 183, 124, .27);
 
   box-shadow:
     0 15px 38px rgba(18, 13, 23, .25),
-    inset 0 1px 0 rgba(255, 255, 255, .05);
+    inset 0 1px 0 rgba(255, 255, 255, .06);
 }
 
 .dark .sound-card--playing {
   background:
     linear-gradient(
       145deg,
-      #655474,
-      #594866
+      rgba(101, 84, 116, .82),
+      rgba(89, 72, 102, .76)
     );
 
-  border-color: rgba(220, 190, 128, .58);
+  border-color:
+    rgba(220, 190, 128, .58);
 }
 
 
 /* =========================================================
-   СЛАЙДЕРЫ МИКСОВ
+   СЛАЙДЕРЫ
    ========================================================= */
 
 .mix-slider {
@@ -403,10 +462,13 @@ button {
 
 .mix-slider [data-slot="slider-track"] {
   height: .5rem;
-  background: rgba(117, 101, 143, .22);
+
+  background:
+    rgba(117, 101, 143, .22);
 
   box-shadow:
-    inset 0 0 0 1px rgba(104, 87, 127, .13);
+    inset 0 0 0 1px
+    rgba(104, 87, 127, .13);
 }
 
 .mix-slider [data-slot="slider-range"] {
@@ -416,6 +478,7 @@ button {
 .mix-slider [data-slot="slider-thumb"] {
   width: 1.15rem;
   height: 1.15rem;
+
   border-width: 3px;
   border-color: var(--primary);
 
@@ -425,7 +488,8 @@ button {
 }
 
 .dark .mix-slider [data-slot="slider-track"] {
-  background: rgba(226, 216, 239, .20);
+  background:
+    rgba(226, 216, 239, .20);
 }
 
 
@@ -435,7 +499,10 @@ button {
 
 .quiet-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(117, 101, 143, .35) transparent;
+
+  scrollbar-color:
+    rgba(117, 101, 143, .35)
+    transparent;
 }
 
 
@@ -471,5 +538,22 @@ button {
 @media (max-width: 700px) {
   body::before {
     background-position: 54% center;
+  }
+
+  /*
+   * На телефоне чуть меньше blur:
+   * визуально почти то же самое,
+   * но браузеру легче.
+   */
+  .glass,
+  .sound-library-panel,
+  .sound-card {
+    -webkit-backdrop-filter:
+      blur(14px)
+      saturate(1.03);
+
+    backdrop-filter:
+      blur(14px)
+      saturate(1.03);
   }
 }
