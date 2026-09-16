@@ -30,37 +30,40 @@
 }
 
 :root {
-  --background: #eee9f2;
+  --background: #f5f0ed;
   --foreground: #40384c;
 
-  --card: rgba(232, 224, 241, .94);
+  /* Тёплые жемчужные поверхности */
+  --card: rgba(248, 243, 239, .95);
   --card-foreground: #40384c;
 
-  --popover: #f1ebf5;
+  --popover: #faf6f2;
   --popover-foreground: #40384c;
 
+  /* Сиреневый оставляем акцентом */
   --primary: #75658f;
   --primary-foreground: #fff;
 
-  --secondary: #e9e1f1;
+  --secondary: #f2ebe8;
   --secondary-foreground: #40384c;
 
-  --muted: #ebe4f2;
-  --muted-foreground: #6f667a;
+  --muted: #f3edeb;
+  --muted-foreground: #756b78;
 
-  --accent: #d5cbea;
+  /* Активное состояние — пудровая лаванда */
+  --accent: #ded3e5;
   --accent-foreground: #40384c;
 
   --destructive: #9b465a;
 
-  --border: #c5b5d8;
-  --input: #cbbfe0;
+  --border: #d5c3b5;
+  --input: #d7c9ce;
   --ring: #75658f;
 
   /* Шампанское золото */
   --gold: #c9a467;
-  --gold-soft: rgba(201, 164, 103, .48);
-  --gold-faint: rgba(201, 164, 103, .20);
+  --gold-soft: rgba(201, 164, 103, .50);
+  --gold-faint: rgba(201, 164, 103, .18);
 
   --radius: 1rem;
 }
@@ -120,10 +123,11 @@ body {
   font-size: 16px;
 }
 
-/*
- * Фон приложения.
- * Использует /public/assets/background.png
- */
+
+/* =========================================================
+   ФОН
+   ========================================================= */
+
 body::before {
   content: "";
   position: fixed;
@@ -133,10 +137,9 @@ body::before {
   background:
     linear-gradient(
       135deg,
-      rgba(236, 226, 241, .30),
-      rgba(208, 190, 219, .16) 42%,
-      rgba(236, 215, 221, .18) 72%,
-      rgba(219, 204, 232, .24)
+      rgba(255, 250, 245, .10),
+      rgba(238, 222, 224, .08) 45%,
+      rgba(232, 221, 239, .08)
     ),
     url('/assets/background.png') center / cover no-repeat;
 }
@@ -149,17 +152,17 @@ body::after {
 
   background:
     radial-gradient(
-      circle at 18% 10%,
-      rgba(255, 246, 225, .20),
+      circle at 20% 12%,
+      rgba(255, 249, 235, .13),
       transparent 30%
     ),
     radial-gradient(
       circle at 82% 28%,
-      rgba(199, 173, 216, .13),
-      transparent 34%
+      rgba(215, 191, 208, .06),
+      transparent 35%
     );
 
-  backdrop-filter: saturate(.88);
+  backdrop-filter: saturate(.92);
 }
 
 .dark body::before {
@@ -169,6 +172,7 @@ body::after {
 .dark body::after {
   background: rgba(35, 29, 42, .5);
 }
+
 
 button,
 input,
@@ -187,39 +191,46 @@ button {
 
 
 /* =========================================================
-   ОСНОВНЫЕ СТЕКЛЯННЫЕ ПАНЕЛИ
+   ОСНОВНЫЕ ПАНЕЛИ
    ========================================================= */
 
 .glass {
-  background: rgba(237, 231, 245, .94);
-  border: 1px solid rgba(177, 158, 202, .72);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(250, 246, 242, .95),
+      rgba(245, 238, 237, .94)
+    );
+
+  border: 1px solid rgba(199, 170, 122, .42);
 
   box-shadow:
-    0 14px 42px rgba(64, 56, 76, .10),
-    0 1px 0 rgba(255, 255, 255, .55) inset;
+    0 14px 42px rgba(64, 56, 76, .09),
+    0 1px 0 rgba(255, 255, 255, .68) inset;
 
   backdrop-filter: blur(10px);
 }
 
 
-/*
- * Верхняя панель с логотипом.
- */
+/* =========================================================
+   ВЕРХНЯЯ ШАПКА
+   ========================================================= */
+
 .glass:has(.brand-logo) {
   background:
     linear-gradient(
       135deg,
-      rgba(224, 213, 237, .97),
-      rgba(210, 194, 226, .96) 55%,
-      rgba(224, 207, 222, .95)
+      rgba(248, 240, 235, .97),
+      rgba(239, 226, 226, .96) 52%,
+      rgba(236, 225, 235, .95)
     );
 
-  border-color: var(--gold-soft);
+  border-color: rgba(190, 151, 87, .55);
 
   box-shadow:
-    0 15px 42px rgba(74, 57, 91, .13),
-    0 0 0 1px var(--gold-faint),
-    inset 0 1px 0 rgba(255, 255, 255, .58);
+    0 15px 42px rgba(74, 57, 91, .12),
+    0 0 0 1px rgba(201, 164, 103, .10),
+    inset 0 1px 0 rgba(255, 255, 255, .68);
 }
 
 
@@ -227,10 +238,6 @@ button {
    ЛОГОТИП
    ========================================================= */
 
-/*
- * Тёмно-сливовая тонкая окантовка делает золотые буквы
- * заметнее на светло-сиреневой шапке.
- */
 .brand-logo {
   filter:
     drop-shadow(0 1px 0 rgba(73, 50, 77, .78))
@@ -250,16 +257,16 @@ button {
   background:
     linear-gradient(
       145deg,
-      rgba(239, 232, 246, .97),
-      rgba(230, 220, 240, .96)
+      rgba(250, 246, 243, .97),
+      rgba(245, 237, 237, .96)
     );
 
-  border-color: rgba(190, 163, 116, .46);
+  border-color: rgba(190, 153, 93, .45);
 
   box-shadow:
-    0 16px 42px rgba(75, 62, 91, .11),
-    0 3px 10px rgba(75, 62, 91, .06),
-    0 0 0 1px rgba(218, 190, 137, .09);
+    0 16px 42px rgba(75, 62, 91, .10),
+    0 3px 10px rgba(75, 62, 91, .05),
+    0 0 0 1px rgba(218, 190, 137, .08);
 }
 
 
@@ -271,35 +278,35 @@ button {
   background:
     linear-gradient(
       145deg,
-      #e4ddf0,
-      #ddd3e9
+      rgba(248, 243, 240, .97),
+      rgba(241, 232, 233, .97)
     );
 
-  border: 1px solid rgba(190, 155, 96, .52);
+  border: 1px solid rgba(190, 151, 88, .54);
 
   box-shadow:
-    0 12px 32px rgba(75, 62, 91, .12),
-    0 2px 8px rgba(75, 62, 91, .07),
-    inset 0 1px 0 rgba(255, 255, 255, .48);
+    0 12px 32px rgba(75, 62, 91, .10),
+    0 2px 8px rgba(75, 62, 91, .05),
+    inset 0 1px 0 rgba(255, 255, 255, .70);
 }
 
 
-/* Включённый звук */
+/* Включённая карточка сохраняет сиреневый акцент */
 .sound-card--playing {
   background:
     linear-gradient(
       145deg,
-      #d8cbea,
-      #cdbdde
+      #e4d9e9,
+      #d8c9e1
     );
 
-  border-color: rgba(181, 139, 70, .78);
+  border-color: rgba(175, 132, 62, .78);
 
   box-shadow:
-    0 13px 34px rgba(75, 62, 91, .16),
-    0 0 0 1px rgba(205, 168, 103, .22),
-    0 0 20px rgba(205, 168, 103, .08),
-    inset 0 1px 0 rgba(255, 255, 255, .42);
+    0 13px 34px rgba(75, 62, 91, .15),
+    0 0 0 1px rgba(205, 168, 103, .20),
+    0 0 20px rgba(205, 168, 103, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .52);
 }
 
 
@@ -308,15 +315,15 @@ button {
     background:
       linear-gradient(
         145deg,
-        #e1d8ed,
-        #d8cce7
+        #f5eeec,
+        #ecdfdf
       );
 
-    border-color: rgba(181, 139, 70, .70);
+    border-color: rgba(181, 139, 70, .72);
 
     box-shadow:
-      0 14px 34px rgba(75, 62, 91, .14),
-      0 0 0 1px rgba(205, 168, 103, .12);
+      0 14px 34px rgba(75, 62, 91, .12),
+      0 0 0 1px rgba(205, 168, 103, .10);
 
     transform: translateY(-1px);
   }
@@ -397,7 +404,9 @@ button {
 .mix-slider [data-slot="slider-track"] {
   height: .5rem;
   background: rgba(117, 101, 143, .22);
-  box-shadow: inset 0 0 0 1px rgba(104, 87, 127, .13);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(104, 87, 127, .13);
 }
 
 .mix-slider [data-slot="slider-range"] {
