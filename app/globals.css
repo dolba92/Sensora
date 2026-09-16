@@ -33,8 +33,7 @@
   --background: #f4f0f5;
   --foreground: #40384c;
 
-  /* Почти прозрачные поверхности */
-  --card: rgba(255, 255, 255, .07);
+  --card: rgba(255, 255, 255, .05);
   --card-foreground: #40384c;
 
   --popover: rgba(255, 255, 255, .84);
@@ -43,10 +42,10 @@
   --primary: #75658f;
   --primary-foreground: #ffffff;
 
-  --secondary: rgba(255, 255, 255, .08);
+  --secondary: rgba(255, 255, 255, .06);
   --secondary-foreground: #40384c;
 
-  --muted: rgba(255, 255, 255, .07);
+  --muted: rgba(255, 255, 255, .05);
   --muted-foreground: #665d70;
 
   --accent: rgba(213, 203, 234, .66);
@@ -149,7 +148,6 @@ body::after {
   inset: 0;
   z-index: -1;
 
-  /* Почти никакой общей вуали */
   background: rgba(255, 252, 255, .012);
 }
 
@@ -187,7 +185,7 @@ button {
    ========================================================= */
 
 .glass {
-  background: rgba(255, 255, 255, .10) !important;
+  background: rgba(255, 255, 255, .07) !important;
 
   border: 1px solid rgba(177, 145, 95, .48);
 
@@ -195,8 +193,8 @@ button {
     0 10px 30px rgba(64, 56, 76, .09),
     inset 0 1px 0 rgba(255, 255, 255, .66);
 
-  -webkit-backdrop-filter: blur(10px) saturate(1.04);
-  backdrop-filter: blur(10px) saturate(1.04);
+  -webkit-backdrop-filter: blur(9px) saturate(1.04);
+  backdrop-filter: blur(9px) saturate(1.04);
 }
 
 
@@ -205,11 +203,7 @@ button {
    ========================================================= */
 
 .glass:has(.brand-logo) {
-  /*
-   * Чуть плотнее остальных панелей,
-   * чтобы Sensora хорошо читалась.
-   */
-  background: rgba(255, 255, 255, .14) !important;
+  background: rgba(255, 255, 255, .11) !important;
 
   border-color: rgba(177, 132, 61, .60);
 
@@ -218,8 +212,8 @@ button {
     0 0 0 1px rgba(201, 164, 103, .08),
     inset 0 1px 0 rgba(255, 255, 255, .72);
 
-  -webkit-backdrop-filter: blur(12px) saturate(1.05);
-  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  backdrop-filter: blur(10px) saturate(1.05);
 }
 
 
@@ -243,7 +237,7 @@ button {
    ========================================================= */
 
 .sound-library-panel {
-  background: rgba(255, 255, 255, .10) !important;
+  background: rgba(255, 255, 255, .07) !important;
 
   border: 1px solid rgba(177, 137, 73, .50);
 
@@ -251,8 +245,8 @@ button {
     0 11px 32px rgba(75, 62, 91, .09),
     inset 0 1px 0 rgba(255, 255, 255, .66);
 
-  -webkit-backdrop-filter: blur(10px) saturate(1.03);
-  backdrop-filter: blur(10px) saturate(1.03);
+  -webkit-backdrop-filter: blur(9px) saturate(1.03);
+  backdrop-filter: blur(9px) saturate(1.03);
 }
 
 
@@ -262,10 +256,10 @@ button {
 
 .sound-card {
   /*
-   * Почти бесцветное стекло.
-   * Основной цвет теперь приходит от мрамора под карточкой.
+   * Почти полностью прозрачное стекло.
+   * Цвет карточки в основном формируется фоном под ней.
    */
-  background: rgba(255, 255, 255, .06) !important;
+  background: rgba(255, 255, 255, .035) !important;
 
   border: 1px solid rgba(174, 129, 57, .60);
 
@@ -273,8 +267,8 @@ button {
     0 8px 24px rgba(64, 56, 76, .09),
     inset 0 1px 0 rgba(255, 255, 255, .68);
 
-  -webkit-backdrop-filter: blur(8px) saturate(1.03);
-  backdrop-filter: blur(8px) saturate(1.03);
+  -webkit-backdrop-filter: blur(7px) saturate(1.03);
+  backdrop-filter: blur(7px) saturate(1.03);
 }
 
 
@@ -284,9 +278,10 @@ button {
 
 .sound-card--playing {
   /*
-   * Активный звук отличается лёгким лавандовым стеклом.
+   * Активная карточка остаётся заметной,
+   * но фон через неё тоже хорошо просвечивает.
    */
-  background: rgba(189, 171, 209, .34) !important;
+  background: rgba(189, 171, 209, .28) !important;
 
   border-color: rgba(157, 111, 38, .82);
 
@@ -295,8 +290,8 @@ button {
     0 0 0 1px rgba(205, 168, 103, .18),
     inset 0 1px 0 rgba(255, 255, 255, .62);
 
-  -webkit-backdrop-filter: blur(9px) saturate(1.05);
-  backdrop-filter: blur(9px) saturate(1.05);
+  -webkit-backdrop-filter: blur(8px) saturate(1.05);
+  backdrop-filter: blur(8px) saturate(1.05);
 }
 
 
@@ -306,7 +301,7 @@ button {
 
 @media (hover: hover) {
   .sound-card:not(.sound-card--playing):hover {
-    background: rgba(255, 255, 255, .13) !important;
+    background: rgba(255, 255, 255, .09) !important;
 
     border-color: rgba(157, 111, 38, .78);
 
@@ -454,18 +449,14 @@ button {
     background-position: 54% center;
   }
 
-  /*
-   * На телефоне сохраняем прозрачность,
-   * но немного уменьшаем blur для производительности.
-   */
   .glass,
   .sound-library-panel {
-    -webkit-backdrop-filter: blur(9px) saturate(1.03);
-    backdrop-filter: blur(9px) saturate(1.03);
+    -webkit-backdrop-filter: blur(8px) saturate(1.03);
+    backdrop-filter: blur(8px) saturate(1.03);
   }
 
   .sound-card {
-    -webkit-backdrop-filter: blur(7px) saturate(1.03);
-    backdrop-filter: blur(7px) saturate(1.03);
+    -webkit-backdrop-filter: blur(6px) saturate(1.03);
+    backdrop-filter: blur(6px) saturate(1.03);
   }
 }
