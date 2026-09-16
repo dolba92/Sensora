@@ -178,7 +178,7 @@ export class AudioEngine {
         return false;
       }
 
-      this.fadeGainTo(track, safeVolume, 1.2);
+      this.fadeGainTo(track, safeVolume, 10);
       return true;
     } catch (error) {
       if (this.tracks.get(id) === track) {
@@ -223,7 +223,7 @@ export class AudioEngine {
         return false;
       }
 
-      this.fadeGainTo(track, safeVolume, 1.2);
+      this.fadeGainTo(track, safeVolume, 10);
       return true;
     } catch (error) {
       if (this.tracks.get(id) === track) {
