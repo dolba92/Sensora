@@ -1,9 +1,9 @@
-const CACHE = 'sensora-v13';
+const CACHE = 'sensora-v14';
 
 const CORE = [
   '/manifest.webmanifest',
   '/assets/logo.png',
-  '/assets/background.png',
+  '/assets/background.png?v=2',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
 ];
