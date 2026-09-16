@@ -33,8 +33,7 @@
   --background: #f4f0f5;
   --foreground: #40384c;
 
-  /* Прозрачные базовые поверхности */
-  --card: rgba(255, 255, 255, .24);
+  --card: rgba(255, 255, 255, .18);
   --card-foreground: #40384c;
 
   --popover: rgba(255, 255, 255, .82);
@@ -43,10 +42,10 @@
   --primary: #75658f;
   --primary-foreground: #fff;
 
-  --secondary: rgba(255, 255, 255, .22);
+  --secondary: rgba(255, 255, 255, .18);
   --secondary-foreground: #40384c;
 
-  --muted: rgba(255, 255, 255, .20);
+  --muted: rgba(255, 255, 255, .16);
   --muted-foreground: #665d70;
 
   --accent: rgba(213, 203, 234, .72);
@@ -120,6 +119,7 @@ body {
   font-size: 16px;
 }
 
+
 /* =========================================================
    ФОН
    ========================================================= */
@@ -141,7 +141,6 @@ body::after {
   inset: 0;
   z-index: -1;
 
-  /* Очень лёгкая вуаль, чтобы фон не спорил с текстом */
   background: rgba(255, 252, 255, .025);
 }
 
@@ -152,6 +151,11 @@ body::after {
 .dark body::after {
   background: rgba(35, 29, 42, .34);
 }
+
+
+/* =========================================================
+   ОБЩЕЕ
+   ========================================================= */
 
 button,
 input,
@@ -168,12 +172,13 @@ button {
   outline-offset: 3px;
 }
 
+
 /* =========================================================
    МАТОВОЕ СТЕКЛО
    ========================================================= */
 
 .glass {
-  background: rgba(255, 255, 255, .25) !important;
+  background: rgba(255, 255, 255, .18) !important;
 
   border: 1px solid rgba(177, 145, 95, .46);
 
@@ -185,11 +190,16 @@ button {
   backdrop-filter: blur(16px) saturate(1.05);
 }
 
+
 /* =========================================================
    ШАПКА
    ========================================================= */
 
 .glass:has(.brand-logo) {
+  /*
+   * Шапку специально оставляем чуть плотнее,
+   * чтобы золотой логотип хорошо читался.
+   */
   background: rgba(255, 255, 255, .22) !important;
 
   border-color: rgba(177, 132, 61, .58);
@@ -202,6 +212,7 @@ button {
   -webkit-backdrop-filter: blur(18px) saturate(1.06);
   backdrop-filter: blur(18px) saturate(1.06);
 }
+
 
 /* =========================================================
    ЛОГОТИП
@@ -217,12 +228,13 @@ button {
     drop-shadow(0 0 5px rgba(201, 164, 103, .18));
 }
 
+
 /* =========================================================
-   БИБЛИОТЕКА
+   ПАНЕЛЬ БИБЛИОТЕКИ
    ========================================================= */
 
 .sound-library-panel {
-  background: rgba(255, 255, 255, .26) !important;
+  background: rgba(255, 255, 255, .18) !important;
 
   border: 1px solid rgba(177, 137, 73, .48);
 
@@ -234,12 +246,17 @@ button {
   backdrop-filter: blur(17px) saturate(1.04);
 }
 
+
 /* =========================================================
-   КАРТОЧКИ
+   КАРТОЧКИ ЗВУКОВ
    ========================================================= */
 
 .sound-card {
-  background: rgba(255, 255, 255, .22) !important;
+  /*
+   * Более прозрачные карточки:
+   * мрамор сильнее просвечивает сквозь стекло.
+   */
+  background: rgba(255, 255, 255, .14) !important;
 
   border: 1px solid rgba(174, 129, 57, .58);
 
@@ -251,9 +268,17 @@ button {
   backdrop-filter: blur(14px) saturate(1.04);
 }
 
-/* Включённый звук */
+
+/* =========================================================
+   ВКЛЮЧЁННЫЙ ЗВУК
+   ========================================================= */
+
 .sound-card--playing {
-  background: rgba(203, 188, 220, .48) !important;
+  /*
+   * Активная карточка заметнее обычных,
+   * но всё ещё остаётся полупрозрачной.
+   */
+  background: rgba(203, 188, 220, .44) !important;
 
   border-color: rgba(157, 111, 38, .80);
 
@@ -266,9 +291,15 @@ button {
   backdrop-filter: blur(16px) saturate(1.06);
 }
 
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
 @media (hover: hover) {
   .sound-card:not(.sound-card--playing):hover {
-    background: rgba(255, 255, 255, .32) !important;
+    background: rgba(255, 255, 255, .24) !important;
+
     border-color: rgba(157, 111, 38, .76);
 
     box-shadow:
@@ -279,12 +310,14 @@ button {
   }
 }
 
+
 /* =========================================================
    ТЁМНАЯ ТЕМА
    ========================================================= */
 
 .dark .glass {
   background: rgba(43, 36, 51, .46) !important;
+
   border-color: rgba(211, 183, 124, .27);
 
   -webkit-backdrop-filter: blur(18px) saturate(.9);
@@ -293,6 +326,7 @@ button {
 
 .dark .glass:has(.brand-logo) {
   background: rgba(48, 39, 57, .44) !important;
+
   border-color: rgba(211, 183, 124, .43);
 }
 
@@ -308,6 +342,7 @@ button {
 
 .dark .sound-library-panel {
   background: rgba(45, 37, 54, .48) !important;
+
   border-color: rgba(211, 183, 124, .28);
 }
 
@@ -323,8 +358,10 @@ button {
 
 .dark .sound-card--playing {
   background: rgba(91, 74, 105, .70) !important;
+
   border-color: rgba(220, 190, 128, .60);
 }
+
 
 /* =========================================================
    СЛАЙДЕРЫ
@@ -337,6 +374,7 @@ button {
 
 .mix-slider [data-slot="slider-track"] {
   height: .5rem;
+
   background: rgba(117, 101, 143, .22);
 
   box-shadow:
@@ -350,6 +388,7 @@ button {
 .mix-slider [data-slot="slider-thumb"] {
   width: 1.15rem;
   height: 1.15rem;
+
   border-width: 3px;
   border-color: var(--primary);
 
@@ -362,6 +401,7 @@ button {
   background: rgba(226, 216, 239, .20);
 }
 
+
 /* =========================================================
    ПРОКРУТКА
    ========================================================= */
@@ -370,6 +410,7 @@ button {
   scrollbar-width: thin;
   scrollbar-color: rgba(117, 101, 143, .35) transparent;
 }
+
 
 /* =========================================================
    REDUCED MOTION
@@ -394,6 +435,7 @@ button {
   animation-iteration-count: 1 !important;
   transition-duration: .01ms !important;
 }
+
 
 /* =========================================================
    MOBILE
