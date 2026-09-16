@@ -33,22 +33,23 @@
   --background: #f4f0f5;
   --foreground: #40384c;
 
-  --card: rgba(255, 255, 255, .18);
+  /* Почти прозрачные поверхности */
+  --card: rgba(255, 255, 255, .07);
   --card-foreground: #40384c;
 
-  --popover: rgba(255, 255, 255, .82);
+  --popover: rgba(255, 255, 255, .84);
   --popover-foreground: #40384c;
 
   --primary: #75658f;
-  --primary-foreground: #fff;
+  --primary-foreground: #ffffff;
 
-  --secondary: rgba(255, 255, 255, .18);
+  --secondary: rgba(255, 255, 255, .08);
   --secondary-foreground: #40384c;
 
-  --muted: rgba(255, 255, 255, .16);
+  --muted: rgba(255, 255, 255, .07);
   --muted-foreground: #665d70;
 
-  --accent: rgba(213, 203, 234, .72);
+  --accent: rgba(213, 203, 234, .66);
   --accent-foreground: #40384c;
 
   --destructive: #9b465a;
@@ -68,7 +69,7 @@
   --background: #2f2a36;
   --foreground: #f4f0f8;
 
-  --card: rgba(42, 35, 50, .42);
+  --card: rgba(42, 35, 50, .30);
   --card-foreground: #f4f0f8;
 
   --popover: rgba(55, 46, 65, .90);
@@ -77,13 +78,13 @@
   --primary: #c5b7dd;
   --primary-foreground: #2d2635;
 
-  --secondary: rgba(58, 49, 68, .45);
+  --secondary: rgba(58, 49, 68, .32);
   --secondary-foreground: #f4f0f8;
 
-  --muted: rgba(55, 47, 64, .45);
+  --muted: rgba(55, 47, 64, .32);
   --muted-foreground: #c9c0d1;
 
-  --accent: rgba(90, 75, 105, .78);
+  --accent: rgba(90, 75, 105, .72);
   --accent-foreground: #f7f3fa;
 
   --destructive: #e8879c;
@@ -113,9 +114,16 @@ body {
   overflow-x: hidden;
   position: relative;
   isolation: isolate;
+
   color: var(--foreground);
   background: transparent;
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+
+  font-family:
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+
   font-size: 16px;
 }
 
@@ -141,7 +149,8 @@ body::after {
   inset: 0;
   z-index: -1;
 
-  background: rgba(255, 252, 255, .025);
+  /* Почти никакой общей вуали */
+  background: rgba(255, 252, 255, .012);
 }
 
 .dark body::before {
@@ -149,7 +158,7 @@ body::after {
 }
 
 .dark body::after {
-  background: rgba(35, 29, 42, .34);
+  background: rgba(35, 29, 42, .30);
 }
 
 
@@ -174,20 +183,20 @@ button {
 
 
 /* =========================================================
-   МАТОВОЕ СТЕКЛО
+   ОСНОВНОЕ МАТОВОЕ СТЕКЛО
    ========================================================= */
 
 .glass {
-  background: rgba(255, 255, 255, .18) !important;
+  background: rgba(255, 255, 255, .10) !important;
 
-  border: 1px solid rgba(177, 145, 95, .46);
+  border: 1px solid rgba(177, 145, 95, .48);
 
   box-shadow:
-    0 12px 34px rgba(64, 56, 76, .10),
-    inset 0 1px 0 rgba(255, 255, 255, .72);
+    0 10px 30px rgba(64, 56, 76, .09),
+    inset 0 1px 0 rgba(255, 255, 255, .66);
 
-  -webkit-backdrop-filter: blur(16px) saturate(1.05);
-  backdrop-filter: blur(16px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.04);
+  backdrop-filter: blur(10px) saturate(1.04);
 }
 
 
@@ -197,20 +206,20 @@ button {
 
 .glass:has(.brand-logo) {
   /*
-   * Шапку специально оставляем чуть плотнее,
-   * чтобы золотой логотип хорошо читался.
+   * Чуть плотнее остальных панелей,
+   * чтобы Sensora хорошо читалась.
    */
-  background: rgba(255, 255, 255, .22) !important;
+  background: rgba(255, 255, 255, .14) !important;
 
-  border-color: rgba(177, 132, 61, .58);
+  border-color: rgba(177, 132, 61, .60);
 
   box-shadow:
-    0 13px 36px rgba(64, 56, 76, .11),
+    0 12px 34px rgba(64, 56, 76, .10),
     0 0 0 1px rgba(201, 164, 103, .08),
-    inset 0 1px 0 rgba(255, 255, 255, .76);
+    inset 0 1px 0 rgba(255, 255, 255, .72);
 
-  -webkit-backdrop-filter: blur(18px) saturate(1.06);
-  backdrop-filter: blur(18px) saturate(1.06);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  backdrop-filter: blur(12px) saturate(1.05);
 }
 
 
@@ -234,16 +243,16 @@ button {
    ========================================================= */
 
 .sound-library-panel {
-  background: rgba(255, 255, 255, .18) !important;
+  background: rgba(255, 255, 255, .10) !important;
 
-  border: 1px solid rgba(177, 137, 73, .48);
+  border: 1px solid rgba(177, 137, 73, .50);
 
   box-shadow:
-    0 13px 36px rgba(75, 62, 91, .10),
-    inset 0 1px 0 rgba(255, 255, 255, .72);
+    0 11px 32px rgba(75, 62, 91, .09),
+    inset 0 1px 0 rgba(255, 255, 255, .66);
 
-  -webkit-backdrop-filter: blur(17px) saturate(1.04);
-  backdrop-filter: blur(17px) saturate(1.04);
+  -webkit-backdrop-filter: blur(10px) saturate(1.03);
+  backdrop-filter: blur(10px) saturate(1.03);
 }
 
 
@@ -253,19 +262,19 @@ button {
 
 .sound-card {
   /*
-   * Более прозрачные карточки:
-   * мрамор сильнее просвечивает сквозь стекло.
+   * Почти бесцветное стекло.
+   * Основной цвет теперь приходит от мрамора под карточкой.
    */
-  background: rgba(255, 255, 255, .14) !important;
+  background: rgba(255, 255, 255, .06) !important;
 
-  border: 1px solid rgba(174, 129, 57, .58);
+  border: 1px solid rgba(174, 129, 57, .60);
 
   box-shadow:
-    0 9px 26px rgba(64, 56, 76, .10),
-    inset 0 1px 0 rgba(255, 255, 255, .72);
+    0 8px 24px rgba(64, 56, 76, .09),
+    inset 0 1px 0 rgba(255, 255, 255, .68);
 
-  -webkit-backdrop-filter: blur(14px) saturate(1.04);
-  backdrop-filter: blur(14px) saturate(1.04);
+  -webkit-backdrop-filter: blur(8px) saturate(1.03);
+  backdrop-filter: blur(8px) saturate(1.03);
 }
 
 
@@ -275,20 +284,19 @@ button {
 
 .sound-card--playing {
   /*
-   * Активная карточка заметнее обычных,
-   * но всё ещё остаётся полупрозрачной.
+   * Активный звук отличается лёгким лавандовым стеклом.
    */
-  background: rgba(203, 188, 220, .44) !important;
+  background: rgba(189, 171, 209, .34) !important;
 
-  border-color: rgba(157, 111, 38, .80);
+  border-color: rgba(157, 111, 38, .82);
 
   box-shadow:
-    0 11px 30px rgba(75, 62, 91, .15),
+    0 10px 28px rgba(75, 62, 91, .14),
     0 0 0 1px rgba(205, 168, 103, .18),
-    inset 0 1px 0 rgba(255, 255, 255, .65);
+    inset 0 1px 0 rgba(255, 255, 255, .62);
 
-  -webkit-backdrop-filter: blur(16px) saturate(1.06);
-  backdrop-filter: blur(16px) saturate(1.06);
+  -webkit-backdrop-filter: blur(9px) saturate(1.05);
+  backdrop-filter: blur(9px) saturate(1.05);
 }
 
 
@@ -298,12 +306,12 @@ button {
 
 @media (hover: hover) {
   .sound-card:not(.sound-card--playing):hover {
-    background: rgba(255, 255, 255, .24) !important;
+    background: rgba(255, 255, 255, .13) !important;
 
-    border-color: rgba(157, 111, 38, .76);
+    border-color: rgba(157, 111, 38, .78);
 
     box-shadow:
-      0 12px 30px rgba(64, 56, 76, .13),
+      0 11px 28px rgba(64, 56, 76, .12),
       0 0 0 1px rgba(205, 168, 103, .10);
 
     transform: translateY(-1px);
@@ -316,16 +324,16 @@ button {
    ========================================================= */
 
 .dark .glass {
-  background: rgba(43, 36, 51, .46) !important;
+  background: rgba(43, 36, 51, .34) !important;
 
   border-color: rgba(211, 183, 124, .27);
 
-  -webkit-backdrop-filter: blur(18px) saturate(.9);
-  backdrop-filter: blur(18px) saturate(.9);
+  -webkit-backdrop-filter: blur(12px) saturate(.9);
+  backdrop-filter: blur(12px) saturate(.9);
 }
 
 .dark .glass:has(.brand-logo) {
-  background: rgba(48, 39, 57, .44) !important;
+  background: rgba(48, 39, 57, .38) !important;
 
   border-color: rgba(211, 183, 124, .43);
 }
@@ -341,30 +349,30 @@ button {
 }
 
 .dark .sound-library-panel {
-  background: rgba(45, 37, 54, .48) !important;
+  background: rgba(45, 37, 54, .34) !important;
 
   border-color: rgba(211, 183, 124, .28);
 }
 
 .dark .sound-card {
-  background: rgba(49, 41, 59, .46) !important;
+  background: rgba(49, 41, 59, .30) !important;
 
   border-color: rgba(211, 183, 124, .29);
 
   box-shadow:
-    0 13px 34px rgba(18, 13, 23, .25),
+    0 12px 32px rgba(18, 13, 23, .24),
     inset 0 1px 0 rgba(255, 255, 255, .06);
 }
 
 .dark .sound-card--playing {
-  background: rgba(91, 74, 105, .70) !important;
+  background: rgba(91, 74, 105, .60) !important;
 
   border-color: rgba(220, 190, 128, .60);
 }
 
 
 /* =========================================================
-   СЛАЙДЕРЫ
+   СЛАЙДЕРЫ МИКСОВ
    ========================================================= */
 
 .mix-slider {
@@ -446,10 +454,18 @@ button {
     background-position: 54% center;
   }
 
+  /*
+   * На телефоне сохраняем прозрачность,
+   * но немного уменьшаем blur для производительности.
+   */
   .glass,
-  .sound-library-panel,
+  .sound-library-panel {
+    -webkit-backdrop-filter: blur(9px) saturate(1.03);
+    backdrop-filter: blur(9px) saturate(1.03);
+  }
+
   .sound-card {
-    -webkit-backdrop-filter: blur(12px) saturate(1.03);
-    backdrop-filter: blur(12px) saturate(1.03);
+    -webkit-backdrop-filter: blur(7px) saturate(1.03);
+    backdrop-filter: blur(7px) saturate(1.03);
   }
 }
