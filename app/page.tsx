@@ -630,7 +630,7 @@ export default function Home() {
           aria-label="На главный экран"
         >
           <img
-            src="/assets/logo.png"
+            src="/logo.png"
             alt="Sensora"
             className="brand-logo h-12 w-auto object-contain md:h-14"
           />
