@@ -1,11 +1,16 @@
-const CACHE = 'sensora-v15';
+const CACHE = 'sensora-v16';
 
 const CORE = [
   '/manifest.webmanifest',
-  '/assets/logo.png',
+  '/logo.png',
   '/assets/background.png?v=2',
-  '/assets/icon-192.png',
-  '/assets/icon-512.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
+  '/favicon.ico',
+  '/favicon-48.png',
+  '/favicon-32.png',
+  '/favicon-16.png',
 ];
 
 self.addEventListener('install', event => {
@@ -58,19 +63,12 @@ self.addEventListener('fetch', event => {
 
   /*
    * Для переходов между страницами используем network-first.
-   *
-   * Благодаря этому установленная PWA сначала получает
-   * актуальную версию приложения с сервера.
-   * Если интернета нет — используется сохранённая версия.
    */
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          if (
-            response.ok &&
-            url.origin === self.location.origin
-          ) {
+          if (response.ok && url.origin === self.location.origin) {
             const copy = response.clone();
 
             void caches.open(CACHE).then(cache =>
@@ -102,21 +100,17 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(cached => {
       if (cached) return cached;
 
-      return fetch(event.request)
-        .then(response => {
-          if (
-            response.ok &&
-            url.origin === self.location.origin
-          ) {
-            const copy = response.clone();
+      return fetch(event.request).then(response => {
+        if (response.ok && url.origin === self.location.origin) {
+          const copy = response.clone();
 
-            void caches.open(CACHE).then(cache =>
-              cache.put(event.request, copy),
-            );
-          }
+          void caches.open(CACHE).then(cache =>
+            cache.put(event.request, copy),
+          );
+        }
 
-          return response;
-        });
+        return response;
+      });
     }),
   );
 });
