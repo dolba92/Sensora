@@ -222,10 +222,10 @@ button {
    ========================================================= */
 
 .brand-logo {
-  width: 76px;
-  height: 76px;
+  width: 118px;
+  height: 118px;
   object-fit: cover;
-  border-radius: 20px;
+  border-radius: 28px;
   display: block;
 
   filter:
@@ -233,9 +233,28 @@ button {
     drop-shadow(1px 0 0 rgba(73, 50, 77, .46))
     drop-shadow(-1px 0 0 rgba(73, 50, 77, .46))
     drop-shadow(0 -1px 0 rgba(73, 50, 77, .35))
-    drop-shadow(0 3px 7px rgba(73, 50, 77, .24))
-    drop-shadow(0 0 5px rgba(201, 164, 103, .18));
+    drop-shadow(0 5px 12px rgba(73, 50, 77, .24))
+    drop-shadow(0 0 7px rgba(201, 164, 103, .18));
 }
+
+.sensora-sidebar {
+  overflow: hidden;
+}
+
+.sensora-sidebar-logo {
+  width: 142px;
+  min-height: 142px;
+  padding: 12px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(177, 132, 61, .48);
+}
+
+.calm-top-button {
+  box-shadow:
+    0 8px 22px rgba(64, 56, 76, .12),
+    0 0 0 1px rgba(201, 164, 103, .10);
+}
+
 
 
 /* =========================================================
@@ -451,12 +470,6 @@ button {
    ========================================================= */
 
 @media (max-width: 700px) {
-  .brand-logo {
-    width: 68px;
-    height: 68px;
-    border-radius: 18px;
-  }
-
   body::before {
     background-position: 54% center;
   }
