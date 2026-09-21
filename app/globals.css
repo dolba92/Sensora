@@ -485,3 +485,33 @@ button {
     backdrop-filter: blur(6px) saturate(1.03);
   }
 }
+
+/* =========================================================
+   МОБИЛЬНЫЙ ЛОГОТИП
+   ========================================================= */
+
+.mobile-logo {
+  width: 128px;
+  height: 128px;
+  display: grid;
+  place-items: center;
+  border-radius: 32px;
+
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(201, 164, 103, .38);
+
+  box-shadow:
+    0 10px 28px rgba(82, 61, 99, .14),
+    inset 0 1px 0 rgba(255, 255, 255, .22);
+
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+@media (max-width: 767px) {
+  .mobile-logo .brand-logo {
+    width: 104px;
+    height: 104px;
+    border-radius: 24px;
+  }
+}
