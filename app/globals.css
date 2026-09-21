@@ -471,14 +471,10 @@ button {
 
 @media (max-width: 700px) {
   body::before {
-    /*
-     * На узком экране одного background-position недостаточно:
-     * cover сильно обрезает широкую картинку. Поэтому на телефоне
-     * рисуем второй слой той же иллюстрации целиком по ширине снизу.
-     */
-    background:
-      url('/assets/background.png?v=2') right bottom / 100% auto no-repeat,
-      url('/assets/background.png?v=2') center / cover no-repeat;
+    background-image: url('/assets/background-mobile.png?v=1');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
   }
 
   .glass,
