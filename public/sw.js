@@ -2,15 +2,15 @@ const CACHE = 'sensora-v16';
 
 const CORE = [
   '/manifest.webmanifest',
-  '/logo.png',
+  '/assets/logo.png',
   '/assets/background.png?v=2',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png',
-  '/favicon.ico',
-  '/favicon-48.png',
-  '/favicon-32.png',
-  '/favicon-16.png',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png',
+  '/assets/apple-touch-icon.png',
+  '/assets/favicon.ico',
+  '/assets/favicon-48.png',
+  '/assets/favicon-32.png',
+  '/assets/favicon-16.png',
 ];
 
 self.addEventListener('install', event => {
