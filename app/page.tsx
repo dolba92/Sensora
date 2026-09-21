@@ -657,7 +657,7 @@ export default function Home() {
           </div>
         </aside>
         <main className="min-w-0">
-          <div className="mb-4 flex justify-center md:hidden">
+          <div className="mb-4 flex justify-start px-4 md:hidden">
             <button
               onClick={() => setSection('sounds')}
               className="mobile-logo"
