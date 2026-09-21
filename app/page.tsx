@@ -657,6 +657,15 @@ export default function Home() {
           </div>
         </aside>
         <main className="min-w-0">
+          <div className="mb-4 flex justify-center md:hidden">
+            <button
+              onClick={() => setSection('sounds')}
+              className="mobile-logo"
+              aria-label="На главный экран"
+            >
+              <img src="/assets/logo.png" alt="Sensora" className="brand-logo" />
+            </button>
+          </div>
           <div className="mb-5 flex justify-end">
             <button
               onClick={() => setSection('calm')}
