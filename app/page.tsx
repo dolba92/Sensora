@@ -666,7 +666,7 @@ export default function Home() {
               <img src="/assets/logo.png" alt="Sensora" className="brand-logo" />
             </button>
           </div>
-          <div className="mb-5 flex justify-end">
+          <div className="mb-5 hidden justify-end md:flex">
             <button
               onClick={() => setSection('calm')}
               className="calm-top-button flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-sm transition hover:bg-[#68577f] md:px-6"
@@ -690,6 +690,7 @@ export default function Home() {
               addFile={addFile}
               removeCustom={removeCustom}
               onSave={() => setSaveOpen(true)}
+              onCalm={() => setSection('calm')}
             />
           ) : section === 'mixes' ? (
             <Mixes
@@ -805,6 +806,7 @@ function SoundLibrary({
   addFile,
   removeCustom,
   onSave,
+  onCalm,
 }: {
   title: string;
   filtered: Sound[];
@@ -819,6 +821,7 @@ function SoundLibrary({
   addFile: (f: File | null) => void;
   removeCustom: (id: string) => void;
   onSave: () => void;
+  onCalm: () => void;
 }) {
   return (
     <section>
@@ -851,6 +854,13 @@ function SoundLibrary({
             </button>
           </div>
         </div>
+        <button
+          onClick={onCalm}
+          className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-sm transition hover:bg-[#68577f] md:hidden"
+        >
+          <Headphones size={20} />
+          <span>Мне нужно успокоиться</span>
+        </button>
         <div className="quiet-scroll mt-6 flex gap-2 overflow-x-auto pb-2">
           {CATEGORIES.map((c) => (
             <button
