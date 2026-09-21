@@ -623,28 +623,19 @@ export default function Home() {
   }, [allSounds, start]);
   return (
     <div className="min-h-screen p-3 pb-28 md:p-6 md:pb-8">
-      <header className="glass mx-auto flex max-w-[1440px] items-center justify-between rounded-[28px] px-4 py-3 md:px-7">
-        <button
-          onClick={() => setSection('sounds')}
-          className="rounded-xl"
-          aria-label="На главный экран"
-        >
-          <img
-            src="/assets/logo.png"
-            alt="Sensora"
-            className="brand-logo h-12 w-auto object-contain md:h-14"
-          />
-        </button>
-        <button
-          onClick={() => setSection('calm')}
-          className="flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-sm transition hover:bg-[#68577f] md:px-6"
-        >
-          <Headphones size={20} />
-          <span>Мне нужно успокоиться</span>
-        </button>
-      </header>
-      <div className="mx-auto mt-5 grid max-w-[1440px] gap-5 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)]">
-        <aside className="glass hidden h-fit rounded-[28px] p-3 md:block">
+      <div className="mx-auto grid max-w-[1440px] gap-5 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)]">
+        <aside className="glass sensora-sidebar hidden h-fit rounded-[28px] p-3 md:block">
+          <button
+            onClick={() => setSection('sounds')}
+            className="sensora-sidebar-logo mx-auto mb-4 grid place-items-center rounded-[26px]"
+            aria-label="На главный экран"
+          >
+            <img
+              src="/assets/logo.png"
+              alt="Sensora"
+              className="brand-logo"
+            />
+          </button>
           <nav aria-label="Основные разделы" className="space-y-1">
             {NAV.map(([id, label, Icon]) => (
               <button
@@ -666,6 +657,15 @@ export default function Home() {
           </div>
         </aside>
         <main className="min-w-0">
+          <div className="mb-5 flex justify-end">
+            <button
+              onClick={() => setSection('calm')}
+              className="calm-top-button flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-sm transition hover:bg-[#68577f] md:px-6"
+            >
+              <Headphones size={20} />
+              <span>Мне нужно успокоиться</span>
+            </button>
+          </div>
           {section === 'sounds' || section === 'favorites' ? (
             <SoundLibrary
               title={section === 'favorites' ? 'Избранное' : 'Звуки'}
